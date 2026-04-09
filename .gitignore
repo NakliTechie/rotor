@@ -6,6 +6,7 @@
 !.gitignore
 !BACKUP-FORMAT.md
 !CNAME
+!favicon.svg
 
 # wrangler files
 .wrangler
