@@ -75,7 +75,7 @@
   .btn.ghost { background: transparent; color: var(--muted); border: 1px solid var(--border); }
   .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-  .app { max-width: 880px; margin: 0 auto; padding: 24px 20px 120px; }
+  .app { max-width: 880px; margin: 0 auto; padding: 24px 20px 80px; }
   .topbar {
     display: flex; align-items: center; justify-content: space-between;
     margin-bottom: 20px;
@@ -232,6 +232,68 @@
 
   .footer { margin-top: 28px; text-align: center; font-size: 12px; color: var(--muted); }
   .footer a { color: var(--muted); }
+
+  /* Unified footer-nav floater, per naklitechie series pattern */
+  .footer-nav {
+    position: fixed;
+    bottom: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 24px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    padding: 6px 18px;
+    border-radius: 20px;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.15);
+    font-size: 12px;
+    white-space: nowrap;
+    z-index: 50;
+  }
+  .footer-nav a {
+    color: var(--accent);
+    text-decoration: none;
+    transition: opacity 0.2s;
+  }
+  .footer-nav a:hover { opacity: 0.7; }
+
+  /* Help modal — wider and prose-friendly */
+  #modal-help .modal { max-width: 640px; }
+  .help-body { font-size: 14px; line-height: 1.6; color: var(--text); }
+  .help-body h4 {
+    margin: 18px 0 8px; font-size: 14px; color: var(--accent);
+    text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .help-body h4:first-child { margin-top: 0; }
+  .help-body p { margin: 0 0 10px; }
+  .help-body ul { margin: 0 0 10px; padding-left: 22px; }
+  .help-body li { margin-bottom: 4px; }
+  .help-body code {
+    background: var(--panel-2);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 12.5px;
+  }
+  .help-body .kbd {
+    display: inline-block;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-bottom-width: 2px;
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-family: var(--mono);
+    font-size: 12px;
+  }
+  .help-warn {
+    background: rgba(255,200,87,0.08);
+    border: 1px solid rgba(255,200,87,0.3);
+    color: var(--warn);
+    padding: 10px 12px;
+    border-radius: 8px;
+    margin: 10px 0;
+    font-size: 13px;
+    line-height: 1.5;
+  }
 
   @media (max-width: 520px) {
     .app { padding: 16px 14px 120px; }
@@ -520,7 +582,76 @@
   </div>
 </div>
 
-<div id="toast" style="position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:var(--panel); border:1px solid var(--border); padding:10px 16px; border-radius:8px; display:none; z-index:200; font-size:14px;"></div>
+<div id="modal-help" class="modal-bg">
+  <div class="modal">
+    <h3>About Rotor</h3>
+    <div class="help-body">
+      <h4>What this is</h4>
+      <p>
+        Rotor is a TOTP authenticator — the kind that shows rotating 6-digit
+        codes for two-factor login. It runs entirely in your browser as a
+        single HTML file. No account, no cloud, no sync, no server.
+      </p>
+
+      <h4>Why it exists</h4>
+      <p>
+        Every major authenticator app today is tied to an account, a cloud
+        backup, a phone number, or an app store. Rotor is the opposite:
+        you get a URL, you open it, and your secrets live only on the device
+        you opened it on. The code is one HTML file you can read end-to-end.
+        Nothing phones home. There is no "Rotor" the company.
+      </p>
+
+      <h4>The tradeoff you're accepting</h4>
+      <div class="help-warn">
+        <strong>There is no recovery.</strong> If you forget your passphrase
+        or lose this device without a backup, your accounts are gone. Rotor
+        cannot reset it for you because Rotor has never seen it. This is the
+        price of having no account.
+      </div>
+
+      <h4>Basic usage</h4>
+      <ul>
+        <li><strong>First time:</strong> set a passphrase. It encrypts your vault and never leaves the device.</li>
+        <li><strong>Add an account:</strong> click <code>＋ Add</code>. Scan a QR code with your camera, paste an <code>otpauth://</code> URI, or type the secret manually.</li>
+        <li><strong>Migrate from another authenticator:</strong> export an <code>otpauth-migration://</code> URI from the other app, paste it. Rotor shows a confirmation list before importing.</li>
+        <li><strong>Get a code:</strong> tap the card. The code is copied to your clipboard and auto-clears after 20 seconds.</li>
+        <li><strong>Back up:</strong> Settings → Export backup. You get a <code>.rotor</code> file (encrypted — safe to put in any cloud folder). Do this early.</li>
+        <li><strong>Restore:</strong> on the unlock or first-run screen, click <em>I have a backup</em>.</li>
+      </ul>
+
+      <h4>Keyboard</h4>
+      <ul>
+        <li><span class="kbd">?</span> — open this help</li>
+        <li><span class="kbd">Esc</span> — close the topmost modal</li>
+        <li><span class="kbd">Enter</span> — submit passphrase on the unlock screen</li>
+      </ul>
+
+      <h4>How it's built</h4>
+      <ul>
+        <li>One HTML file. No framework. No build step. No runtime network requests.</li>
+        <li>AES-256-GCM vault, key derived from your passphrase via PBKDF2-SHA256 (600,000 iterations).</li>
+        <li>Backup file format is documented and decryptable with OpenSSL — Rotor is never the only thing between you and your secrets.</li>
+        <li>Service worker caches the app shell so it works with the network disabled after first load.</li>
+      </ul>
+
+      <p style="margin-top:16px; color:var(--muted); font-size:12.5px;">
+        Source, backup format, and the full story:
+        <a href="https://github.com/NakliTechie/rotor" target="_blank" rel="noopener" style="color:var(--accent);">github.com/NakliTechie/rotor</a>
+      </p>
+    </div>
+    <div class="actions-bar">
+      <button class="btn" data-close>Got it</button>
+    </div>
+  </div>
+</div>
+
+<div class="footer-nav">
+  <a href="https://naklitechie.github.io/" target="_blank" rel="noopener">&#x2B05; More Projects</a>
+  <a href="https://github.com/NakliTechie/rotor" target="_blank" rel="noopener">&#x2328; Source</a>
+</div>
+
+<div id="toast" style="position:fixed; bottom:60px; left:50%; transform:translateX(-50%); background:var(--panel); border:1px solid var(--border); padding:10px 16px; border-radius:8px; display:none; z-index:200; font-size:14px;"></div>
 
 <script>
 // ===== inlined: jsQR v1.4.0 (MIT, https://github.com/cozmo/jsQR) =====
@@ -1475,6 +1606,15 @@ function lockVault() {
 function updateTopActions() {
   const host = $('topActions');
   host.innerHTML = '';
+  // Help is always visible — even on first-run and unlock screens
+  const helpBtn = document.createElement('button');
+  helpBtn.className = 'btn ghost';
+  helpBtn.textContent = '?';
+  helpBtn.title = 'About Rotor (press ?)';
+  helpBtn.setAttribute('aria-label', 'About Rotor');
+  helpBtn.addEventListener('click', () => openModal('modal-help'));
+  host.appendChild(helpBtn);
+
   if (state.payload) {
     const settingsBtn = document.createElement('button');
     settingsBtn.className = 'btn ghost';
@@ -1683,6 +1823,7 @@ async function destroyVault() {
   state.cryptoKey = null;
   state.salt = null;
   sessionStorage.removeItem(NAG_DISMISS_KEY);
+  try { localStorage.removeItem('rotor_seen_help'); } catch {}
   // Best-effort clipboard wipe in case the user has a code on it
   try { navigator.clipboard.writeText(''); } catch {}
   stopTick();
@@ -1720,7 +1861,20 @@ async function boot() {
     showScreen('screen-unlock');
     setTimeout(() => $('unlock-pass').focus(), 50);
   }
+  updateTopActions();
   wireEvents();
+
+  // First visit ever? Show the welcome/help modal once. Gated by a
+  // localStorage flag (persists across tabs + sessions; cleared on
+  // destroyVault so a fresh user sees it again).
+  try {
+    if (!localStorage.getItem('rotor_seen_help')) {
+      setTimeout(() => {
+        openModal('modal-help');
+        localStorage.setItem('rotor_seen_help', '1');
+      }, 300);
+    }
+  } catch { /* private browsing — skip */ }
 }
 
 function wireEvents() {
@@ -1860,6 +2014,15 @@ function wireEvents() {
     if (e.key === 'Escape') {
       const openM = Array.from($$('.modal-bg.active')).pop();
       if (openM) closeModalEl(openM);
+      return;
+    }
+    // ? opens help, but not when the user is typing in a form field
+    if (e.key === '?' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      const tag = (e.target && e.target.tagName) || '';
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+      if (document.querySelector('#modal-help.active')) return;
+      e.preventDefault();
+      openModal('modal-help');
     }
   });
 }
