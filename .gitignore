@@ -6,3 +6,10 @@
 !.gitignore
 !BACKUP-FORMAT.md
 !CNAME
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
+.env*
+!.env.example
