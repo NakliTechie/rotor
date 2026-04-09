@@ -1,6 +1,8 @@
 # Rotor
 
-&#x26AB; **A TOTP authenticator in one HTML file.**
+&#x26AB; **Try it now &rarr; https://rotor.naklitechie.com/**
+
+**A TOTP authenticator in one HTML file.**
 
 No install, no account, no sync, no binaries, no app stores, no update channel.
 Opens in any browser on any device. Your secrets never leave the device.
