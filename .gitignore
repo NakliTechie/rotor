@@ -7,6 +7,9 @@
 !BACKUP-FORMAT.md
 !CNAME
 !favicon.svg
+!guide.html
+!demo
+!demo/*.png
 
 # wrangler files
 .wrangler

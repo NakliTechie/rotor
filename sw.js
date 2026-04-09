@@ -5,8 +5,8 @@
 // and a service worker is the only mechanism that guarantees offline
 // operation. It contains no network code of its own and never phones home.
 
-const CACHE = 'rotor-v3';
-const ASSETS = ['./', './index.html', './sw.js', './favicon.svg'];
+const CACHE = 'rotor-v4';
+const ASSETS = ['./', './index.html', './sw.js', './favicon.svg', './guide.html'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(

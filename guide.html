@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta http-equiv="Content-Security-Policy" content="
+  default-src 'none';
+  script-src 'none';
+  style-src 'unsafe-inline';
+  img-src 'self' data:;
+  base-uri 'none';
+  form-action 'none';
+  frame-ancestors 'none';
+">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<title>Rotor — Guide & Trust Notes</title>
+<style>
+  :root {
+    --bg: #0b0d10;
+    --panel: #14181d;
+    --panel-2: #1b2026;
+    --border: #262c34;
+    --text: #e6e8eb;
+    --muted: #8a94a3;
+    --accent: #7cc4ff;
+    --accent-2: #4a9eff;
+    --warn: #ffc857;
+    --ok: #6bdc8e;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f7f8fa; --panel: #ffffff; --panel-2: #f0f2f5;
+      --border: #dce0e6; --text: #0f1216; --muted: #5a6676;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); font-family: var(--sans); -webkit-text-size-adjust: 100%; }
+  body { line-height: 1.6; }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 32px 22px 120px; }
+
+  /* Topbar */
+  .topbar {
+    display: flex; align-items: baseline; justify-content: space-between;
+    margin-bottom: 28px; flex-wrap: wrap; gap: 12px;
+  }
+  .brand { display: flex; align-items: baseline; gap: 10px; }
+  .brand h1 { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: 0.5px; }
+  .brand .tag { color: var(--muted); font-size: 12px; font-family: var(--mono); }
+  .topbar-links { display: flex; gap: 8px; flex-wrap: wrap; }
+  .topbar-links a {
+    background: var(--panel); border: 1px solid var(--border);
+    color: var(--text); text-decoration: none;
+    padding: 6px 12px; border-radius: 6px; font-size: 13px;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .topbar-links a:hover { border-color: var(--accent); color: var(--accent); }
+  .topbar-links a.primary { background: var(--accent); color: #001122; border-color: var(--accent); font-weight: 600; }
+  .topbar-links a.primary:hover { filter: brightness(1.08); color: #001122; }
+
+  /* Hero */
+  .hero {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 12px; padding: 28px; margin-bottom: 28px;
+  }
+  .hero h2 {
+    margin: 0 0 12px; font-size: 26px; line-height: 1.25;
+  }
+  .hero p { margin: 0 0 12px; color: var(--text); font-size: 15.5px; }
+  .hero p:last-child { margin-bottom: 0; }
+  .hero .lead { color: var(--muted); }
+
+  /* Section */
+  section { margin-bottom: 40px; }
+  section > h2 {
+    margin: 0 0 8px; font-size: 20px; color: var(--text);
+    border-left: 3px solid var(--accent); padding-left: 12px;
+  }
+  section > .sub {
+    color: var(--muted); margin: 0 0 20px 15px; font-size: 14px;
+  }
+
+  /* Cards (run-modes, why-safe) */
+  .cards {
+    display: grid; gap: 14px;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  }
+  .card {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 10px; padding: 18px;
+  }
+  .card h3 {
+    margin: 0 0 8px; font-size: 15px; color: var(--accent);
+    text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .card p { margin: 0; font-size: 14px; color: var(--text); }
+  .card p + p { margin-top: 8px; }
+  .card code {
+    background: var(--panel-2); padding: 1px 6px; border-radius: 4px;
+    font-size: 12.5px; word-break: break-all;
+  }
+
+  /* Flow steps */
+  .flow {
+    display: grid; gap: 28px;
+  }
+  .step {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+    gap: 20px;
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 12px; padding: 18px;
+    align-items: center;
+  }
+  .step .num {
+    display: inline-block;
+    background: var(--panel-2); color: var(--accent);
+    font-family: var(--mono); font-size: 12px; font-weight: 600;
+    padding: 2px 8px; border-radius: 4px; margin-bottom: 8px;
+  }
+  .step h4 {
+    margin: 0 0 8px; font-size: 17px;
+  }
+  .step p {
+    margin: 0; color: var(--muted); font-size: 14px; line-height: 1.55;
+  }
+  .step p + p { margin-top: 8px; }
+  .step .shot {
+    background: #000; border-radius: 8px; overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  .step .shot img {
+    display: block; width: 100%; height: auto;
+  }
+  /* On narrow screens, stack vertically and put screenshot first */
+  @media (max-width: 720px) {
+    .step { grid-template-columns: 1fr; }
+    .step .shot { order: -1; }
+  }
+  /* Mobile flow uses portrait shots — constrain their width on desktop */
+  .mobile-flow .shot { max-width: 320px; margin: 0 auto; }
+  .mobile-flow .step {
+    grid-template-columns: minmax(0, 320px) minmax(0, 1fr);
+  }
+  @media (max-width: 720px) {
+    .mobile-flow .step { grid-template-columns: 1fr; }
+  }
+
+  /* Tabs to switch desktop / mobile */
+  .flow-tabs {
+    display: inline-flex; gap: 4px; background: var(--panel-2);
+    padding: 4px; border-radius: 8px; margin-bottom: 18px;
+  }
+  .flow-tabs label {
+    cursor: pointer; padding: 7px 14px; border-radius: 6px;
+    font-size: 13px; font-weight: 500; color: var(--muted);
+    transition: background 0.15s, color 0.15s;
+  }
+  .flow-tabs input[type="radio"] { display: none; }
+  /* Use :has() to drive the active state — no JS needed */
+  .flow-tabs:has(#tab-desktop:checked) label[for="tab-desktop"],
+  .flow-tabs:has(#tab-mobile:checked)  label[for="tab-mobile"] {
+    background: var(--accent); color: #001122;
+  }
+  /* And to show/hide the matching flow */
+  .desktop-flow, .mobile-flow { display: none; }
+  body:has(#tab-desktop:checked) .desktop-flow { display: grid; }
+  body:has(#tab-mobile:checked)  .mobile-flow  { display: grid; }
+  /* Fallback for browsers without :has() — show desktop by default */
+  @supports not selector(:has(*)) {
+    .desktop-flow { display: grid; }
+    .mobile-flow { display: none; }
+  }
+
+  /* Tradeoff warn box (matches the in-app component) */
+  .warn {
+    background: rgba(255,200,87,0.08);
+    border: 1px solid rgba(255,200,87,0.3);
+    color: var(--warn);
+    padding: 14px 16px; border-radius: 10px;
+    font-size: 14px; line-height: 1.55;
+  }
+  .warn strong { color: var(--warn); }
+
+  /* Code block for the OpenSSL recipe link */
+  pre {
+    background: var(--panel-2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 12px 14px;
+    overflow-x: auto; font-family: var(--mono); font-size: 12.5px;
+    line-height: 1.5; color: var(--text);
+  }
+
+  /* Footer */
+  .footer {
+    margin-top: 50px; padding-top: 22px;
+    border-top: 1px solid var(--border);
+    text-align: center; font-size: 13px; color: var(--muted);
+  }
+  .footer a { color: var(--accent); text-decoration: none; }
+  .footer a:hover { text-decoration: underline; }
+
+  /* The shared floater nav, matching the main app */
+  .footer-nav {
+    position: fixed; bottom: 12px; left: 50%;
+    transform: translateX(-50%);
+    display: flex; gap: 24px;
+    background: var(--panel); border: 1px solid var(--border);
+    padding: 6px 18px; border-radius: 20px;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.15);
+    font-size: 12px; white-space: nowrap; z-index: 50;
+  }
+  .footer-nav a { color: var(--accent); text-decoration: none; transition: opacity 0.2s; }
+  .footer-nav a:hover { opacity: 0.7; }
+</style>
+</head>
+<body>
+
+<!-- Hidden radio inputs that drive the flow tabs without JS -->
+<input type="radio" name="flow" id="tab-desktop" checked style="display:none;">
+<input type="radio" name="flow" id="tab-mobile"  style="display:none;">
+
+<div class="wrap">
+
+  <div class="topbar">
+    <div class="brand">
+      <h1>ROTOR</h1>
+      <span class="tag">guide &amp; trust notes</span>
+    </div>
+    <div class="topbar-links">
+      <a href="index.html" class="primary">&larr; Back to app</a>
+      <a href="https://github.com/NakliTechie/rotor" target="_blank" rel="noopener">Source</a>
+      <a href="BACKUP-FORMAT.md" target="_blank" rel="noopener">Backup format</a>
+    </div>
+  </div>
+
+  <div class="hero">
+    <h2>What you're looking at, and why you can trust it.</h2>
+    <p class="lead">
+      Rotor is a TOTP authenticator &mdash; the kind that shows rotating
+      6&#8209;digit codes for two&#8209;factor login. Unlike every major
+      authenticator app, it has <strong>no account, no cloud, no sync,
+      no app store, and no company behind it</strong>. It is one HTML file.
+      You open a URL, set a passphrase, scan your QR codes, and your
+      secrets live only on the device you opened it on.
+    </p>
+    <p>
+      This page exists because asking strangers to trust unfamiliar
+      software with their two&#8209;factor codes is a big ask. So here is
+      every step of the user flow, captured from the actual app, on
+      desktop and mobile, plus an honest explanation of how Rotor is
+      built and what tradeoffs you're accepting.
+    </p>
+  </div>
+
+  <!-- ============================== RUN MODES ============================== -->
+  <section>
+    <h2>Three ways to run it</h2>
+    <p class="sub">Pick whichever you trust most. They all do the same thing.</p>
+    <div class="cards">
+      <div class="card">
+        <h3>1. Open the URL</h3>
+        <p>
+          <a href="https://rotor.naklitechie.com" style="color:var(--accent);">rotor.naklitechie.com</a>
+          &mdash; loads once, then a service worker caches the page so it
+          works with the network fully disabled. After the first load you
+          can turn off Wi&#8209;Fi and it still works forever.
+        </p>
+      </div>
+      <div class="card">
+        <h3>2. Save the page</h3>
+        <p>
+          In your browser: File &rarr; Save Page As. You get
+          <code>index.html</code> on your disk. Open it any time. No
+          internet required, ever. Drop it in a Dropbox / iCloud folder if
+          you want it on multiple machines &mdash; it's a single file.
+        </p>
+      </div>
+      <div class="card">
+        <h3>3. Clone the repo</h3>
+        <p>
+          <a href="https://github.com/NakliTechie/rotor" target="_blank" rel="noopener" style="color:var(--accent);">github.com/NakliTechie/rotor</a>
+          &mdash; for the maximum&#8209;paranoid: read every line, build it
+          yourself (there is no build), serve it from your own machine
+          with <code>python3 -m http.server</code>.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================== FLOW WALKTHROUGH ============================== -->
+  <section>
+    <h2>The full user flow</h2>
+    <p class="sub">
+      Captured directly from the running app. Switch between the desktop
+      and mobile views below.
+    </p>
+
+    <div class="flow-tabs">
+      <label for="tab-desktop">Desktop</label>
+      <label for="tab-mobile">Mobile</label>
+    </div>
+
+    <!-- ============= DESKTOP FLOW ============= -->
+    <div class="flow desktop-flow">
+
+      <div class="step">
+        <div>
+          <span class="num">01 / WELCOME</span>
+          <h4>The "About Rotor" modal opens automatically on first visit.</h4>
+          <p>
+            It explains what Rotor is, why it exists, the no&#8209;recovery
+            tradeoff in a yellow callout, basic usage, the keyboard
+            shortcuts, and a one&#8209;screen description of how it's
+            built. You can re&#8209;open it any time with the
+            <strong>?</strong> button in the top bar or the
+            <strong>?</strong> key.
+          </p>
+        </div>
+        <div class="shot"><img src="demo/desktop-01-welcome.png" alt="Rotor welcome modal on desktop"></div>
+      </div>
+
+      <div class="step">
+        <div>
+          <span class="num">02 / FIRST RUN</span>
+          <h4>Set a passphrase. There is no &quot;forgot password&quot; flow.</h4>
+          <p>
+            The passphrase is what encrypts your vault. It never leaves
+            your device. Rotor cannot reset it for you because Rotor has
+            never seen it.
+          </p>
+          <p>
+            If you already have a Rotor backup file from another device,
+            click <em>I have a backup</em> instead.
+          </p>
+        </div>
+        <div class="shot"><img src="demo/desktop-02-firstrun.png" alt="Rotor first-run passphrase setup screen"></div>
+      </div>
+
+      <div class="step">
+        <div>
+          <span class="num">03 / TYPED IN</span>
+          <h4>Choose something memorable but strong.</h4>
+          <p>
+            8&#8209;character minimum, but realistically you want a
+            passphrase, not a password. Four random words is fine. The
+            yellow box on this screen tells you the truth about losing it.
+          </p>
+          <p>
+            Rotor encrypts the vault with AES&#8209;256&#8209;GCM and
+            derives the key from your passphrase via PBKDF2&#8209;SHA256
+            at 600,000 iterations &mdash; the OWASP&nbsp;2023 recommended
+            level.
+          </p>
+        </div>
+        <div class="shot"><img src="demo/desktop-03-firstrun-typed.png" alt="Rotor first-run with passphrase typed in"></div>
+      </div>
+
+      <div class="step">
+        <div>
+          <span class="num">04 / VAULT</span>
+          <h4>Your accounts, with rotating codes and a countdown ring.</h4>
+          <p>
+            Each card shows the issuer, the account label, the current
+            code (split for readability), and a countdown ring telling you
+            how many seconds until rotation. A global progress bar at the
+            top runs in lockstep.
+          </p>
+          <p>
+            Tap a card to copy the code. The clipboard auto&#8209;clears
+            after 20&nbsp;seconds.
+          </p>
+        </div>
+        <div class="shot"><img src="demo/desktop-04-vault.png" alt="Rotor vault with five accounts on desktop"></div>
+      </div>
+
+      <div class="step">
+        <div>
+          <span class="num">05 / ADD &mdash; SCAN QR</span>
+          <h4>The default tab is camera scanning.</h4>
+          <p>
+            On a device with a camera, click <em>Start camera</em>, point
+            at the QR code from your account's 2FA setup page, and Rotor
+            decodes it locally. The QR decoder
+            (<a href="https://github.com/cozmo/jsQR" target="_blank" rel="noopener" style="color:var(--accent);">jsQR</a>)
+            is inlined into the HTML &mdash; no CDN, no network call.
+          </p>
+        </div>
+        <div class="shot"><img src="demo/desktop-05-add-scan.png" alt="Rotor add account modal showing QR scan tab"></div>
+      </div>
+
+      <div class="step">
+        <div>
+          <span class="num">06 / ADD &mdash; MANUAL</span>
+          <h4>No camera? Type the secret yourself.</h4>
+          <p>
+            Spaces and case don't matter &mdash; the parser normalises
+            base32. The <em>Advanced</em> drawer lets you change algorithm
+            (SHA&#8209;1 / SHA&#8209;256), digits (6 / 8) and period
+            (30s / 60s) for the few accounts that need it.
+          </p>
+          <p>
+            There's also a <em>Paste URI</em> tab for
+            <code>otpauth://</code> URIs &mdash; including
+            <code>otpauth&#8209;migration://</code> URIs that batch&#8209;import
+            multiple accounts at once from another authenticator.
+          </p>
+        </div>
+        <div class="shot"><img src="demo/desktop-06-add-manual.png" alt="Rotor manual add account form"></div>
+      </div>
+
+      <div class="step">
+        <div>
+          <span class="num">07 / EDIT</span>
+          <h4>Rename, retag, or delete an account.</h4>
+          <p>
+            Click the &hellip; button on any card. You can change the
+            issuer and label freely. The algorithm, digits and period are
+            shown but not editable &mdash; they have to match what the
+            service expects.
+          </p>
+          <p>
+            Delete is irreversible and warns you to disable 2FA on the
+            account first.
+          </p>
+        </div>
+        <div class="shot"><img src="demo/desktop-07-edit.png" alt="Rotor edit account modal"></div>
+      </div>
+
+      <div class="step">
+        <div>
+          <span class="num">08 / SETTINGS</span>
+          <h4>Export, import, change passphrase, lock, destroy.</h4>
+          <p>
+            <em>Export backup</em> downloads a single
+            <code>.rotor</code> file. It's encrypted with the same
+            passphrase, so it's safe to drop in any cloud folder.
+            <em>Import</em> reads <code>.rotor</code> backups, plain
+            JSON account lists, or text files of <code>otpauth://</code>
+            URIs.
+          </p>
+          <p>
+            <em>Destroy vault</em> wipes the entire IndexedDB database
+            and the in&#8209;memory state. There is no undo.
+          </p>
+        </div>
+        <div class="shot"><img src="demo/desktop-08-settings.png" alt="Rotor settings modal"></div>
+      </div>
+
+      <div class="step">
+        <div>
+          <span class="num">09 / LOCK</span>
+          <h4>Click Lock and the passphrase is wiped from memory.</h4>
+          <p>
+            On the next visit (or after the Lock button), you see this
+            screen. Wrong passphrases are rejected by AES&#8209;GCM's
+            authentication tag &mdash; there is no &quot;close enough&quot;.
+          </p>
+          <p>
+            If you've lost the passphrase but have a backup, the
+            <em>I have a backup</em> button lets you restore directly
+            from here.
+          </p>
+        </div>
+        <div class="shot"><img src="demo/desktop-09-unlock.png" alt="Rotor unlock screen"></div>
+      </div>
+
+    </div>
+
+    <!-- ============= MOBILE FLOW ============= -->
+    <div class="flow mobile-flow">
+
+      <div class="step">
+        <div>
+          <span class="num">01 / WELCOME</span>
+          <h4>Same modal, reflowed for narrow screens.</h4>
+          <p>
+            Auto&#8209;opens once on first visit, never again unless you
+            destroy the vault or clear browser data. Re&#8209;openable
+            from the <strong>?</strong> button in the top bar.
+          </p>
+        </div>
+        <div class="shot"><img src="demo/mobile-01-welcome.png" alt="Rotor welcome modal on mobile"></div>
+      </div>
+
+      <div class="step">
+        <div>
+          <span class="num">02 / FIRST RUN</span>
+          <h4>Same passphrase tradeoff. Same yellow warning.</h4>
+          <p>
+            The form is sized for thumbs, the warn callout sits where you
+            can't miss it. <em>I have a backup</em> is right there for
+            users coming from another device.
+          </p>
+        </div>
+        <div class="shot"><img src="demo/mobile-02-firstrun.png" alt="Rotor first-run on mobile"></div>
+      </div>
+
+      <div class="step">
+        <div>
+          <span class="num">03 / TYPED IN</span>
+          <h4>Confirm and tap Create vault.</h4>
+          <p>
+            Once created, the vault lives in this browser's IndexedDB.
+            Switching browsers or clearing site data wipes it &mdash;
+            this is why you back up early.
+          </p>
+        </div>
+        <div class="shot"><img src="demo/mobile-03-firstrun-typed.png" alt="Rotor first-run with passphrase typed on mobile"></div>
+      </div>
+
+      <div class="step">
+        <div>
+          <span class="num">04 / VAULT</span>
+          <h4>Single&#8209;column cards, full&#8209;width tap targets.</h4>
+          <p>
+            Same countdown ring, same global progress bar, same
+            tap&#8209;to&#8209;copy behaviour as desktop. The mobile
+            layout makes each code easy to read at a glance and easy to
+            tap from any thumb position.
+          </p>
+        </div>
+        <div class="shot"><img src="demo/mobile-04-vault.png" alt="Rotor vault on mobile"></div>
+      </div>
+
+      <div class="step">
+        <div>
+          <span class="num">05 / ADD &mdash; SCAN QR</span>
+          <h4>This is where mobile shines.</h4>
+          <p>
+            On a phone with a camera, the scan flow is the natural way to
+            add an account. Tap <em>Start camera</em>, allow permission
+            once, point at the QR code on your laptop screen.
+          </p>
+          <p>
+            Permission is granted to the browser tab only, and Rotor
+            never sends the video stream anywhere &mdash; it decodes
+            frames in JavaScript on&#8209;device.
+          </p>
+        </div>
+        <div class="shot"><img src="demo/mobile-05-add-scan.png" alt="Rotor add account scan QR on mobile"></div>
+      </div>
+
+      <div class="step">
+        <div>
+          <span class="num">06 / ADD &mdash; MANUAL</span>
+          <h4>Same form, sized for phones.</h4>
+          <p>
+            Issuer, label, secret. The Advanced drawer is collapsed by
+            default so the common case (SHA&#8209;1, 6 digits, 30s) is
+            one tap.
+          </p>
+        </div>
+        <div class="shot"><img src="demo/mobile-06-add-manual.png" alt="Rotor manual add on mobile"></div>
+      </div>
+
+      <div class="step">
+        <div>
+          <span class="num">07 / EDIT</span>
+          <h4>Tap the &hellip; on any card.</h4>
+          <p>
+            The edit sheet shows the algorithm, digits and period as
+            read&#8209;only metadata, with editable issuer and label
+            fields and a clearly&#8209;marked Delete button.
+          </p>
+        </div>
+        <div class="shot"><img src="demo/mobile-07-edit.png" alt="Rotor edit modal on mobile"></div>
+      </div>
+
+      <div class="step">
+        <div>
+          <span class="num">08 / SETTINGS</span>
+          <h4>Export, import, change passphrase, lock, destroy.</h4>
+          <p>
+            On mobile the same settings sheet appears as a column of
+            full&#8209;width buttons. Backup downloads to your phone's
+            Files / Downloads, and you can airdrop / share it from there.
+          </p>
+        </div>
+        <div class="shot"><img src="demo/mobile-08-settings.png" alt="Rotor settings on mobile"></div>
+      </div>
+
+      <div class="step">
+        <div>
+          <span class="num">09 / LOCK</span>
+          <h4>Lock and walk away.</h4>
+          <p>
+            The unlock screen is the same on every device. Lose your
+            phone? Restore from backup on a new one. Forget your
+            passphrase? You're stuck &mdash; that's the deal.
+          </p>
+        </div>
+        <div class="shot"><img src="demo/mobile-09-unlock.png" alt="Rotor unlock on mobile"></div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============================== WHY IT'S SAFE ============================== -->
+  <section>
+    <h2>Why this is one of the safest 2FA setups you can run</h2>
+    <p class="sub">Architectural facts, not marketing claims.</p>
+
+    <div class="cards">
+
+      <div class="card">
+        <h3>One file, fully auditable</h3>
+        <p>
+          The entire app is one HTML file (~200&nbsp;KB). No framework,
+          no build step, no dependency tree, no minifier. You can read
+          every line. Most authenticator apps are hundreds of thousands
+          of lines spread across opaque mobile binaries.
+        </p>
+      </div>
+
+      <div class="card">
+        <h3>Zero runtime network</h3>
+        <p>
+          A strict Content&#8209;Security&#8209;Policy header sets
+          <code>connect&#8209;src&nbsp;'none'</code> &mdash; the page is
+          forbidden from making any network request, ever. No telemetry,
+          no analytics, no &quot;phone home&quot; can be added without
+          loudly breaking. The QR decoder is inlined; nothing comes from
+          a CDN.
+        </p>
+      </div>
+
+      <div class="card">
+        <h3>Real cryptography, real parameters</h3>
+        <p>
+          AES&#8209;256&#8209;GCM for the vault. PBKDF2&#8209;SHA256 at
+          600,000 iterations to derive the key from your passphrase
+          (matches OWASP 2023). 16&#8209;byte random salt, 12&#8209;byte
+          random IV per encryption. All via the browser's native
+          <code>SubtleCrypto</code> &mdash; no hand&#8209;rolled crypto.
+        </p>
+      </div>
+
+      <div class="card">
+        <h3>Backup decryptable with OpenSSL</h3>
+        <p>
+          The <code>.rotor</code> backup file format is fully documented
+          in <a href="BACKUP-FORMAT.md" target="_blank" rel="noopener" style="color:var(--accent);">BACKUP-FORMAT.md</a>.
+          It includes a step&#8209;by&#8209;step recipe to recover your
+          accounts from a backup using only OpenSSL on the command line.
+          Rotor is never the only thing standing between you and your
+          secrets.
+        </p>
+      </div>
+
+      <div class="card">
+        <h3>Origin&#8209;isolated storage</h3>
+        <p>
+          The encrypted vault lives in IndexedDB, scoped to the
+          <code>rotor.naklitechie.com</code> origin. Other tabs, other
+          sites, browser extensions, and other apps cannot read it.
+          Locking wipes the passphrase, derived key and decrypted
+          payload from memory.
+        </p>
+      </div>
+
+      <div class="card">
+        <h3>Verified TOTP correctness</h3>
+        <p>
+          On every boot, Rotor runs the four
+          <a href="https://datatracker.ietf.org/doc/html/rfc6238" target="_blank" rel="noopener" style="color:var(--accent);">RFC&nbsp;6238</a>
+          test vectors against its own TOTP implementation and logs the
+          result to the console. If a future change ever broke the
+          generator, you'd see it on the next page load.
+        </p>
+      </div>
+
+      <div class="card">
+        <h3>Safe clipboard</h3>
+        <p>
+          Tap a code and Rotor copies it, then auto&#8209;clears the
+          clipboard 20 seconds later &mdash; but only if the clipboard
+          still contains what we put there, so we never overwrite
+          something else you copied in the meantime.
+        </p>
+      </div>
+
+      <div class="card">
+        <h3>Cached non&#8209;extractable key</h3>
+        <p>
+          Once you unlock, the derived AES key is held as a
+          non&#8209;extractable <code>CryptoKey</code> object &mdash;
+          even malicious in&#8209;page JavaScript can use it to encrypt
+          but cannot read its raw bytes. It's wiped on Lock.
+        </p>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============================== TRADEOFF ============================== -->
+  <section>
+    <h2>The honest tradeoff</h2>
+    <p class="sub">What you give up to get all of the above.</p>
+    <div class="warn">
+      <p style="margin:0 0 10px;">
+        <strong>There is no recovery.</strong> If you forget your
+        passphrase or lose this device without a backup, your accounts
+        are gone. Rotor cannot reset it for you because Rotor has never
+        seen it. This is the price of having no account.
+      </p>
+      <p style="margin:0;">
+        Mitigation: <strong>back up your vault early</strong> with
+        Settings&nbsp;&rarr;&nbsp;Export, store the
+        <code>.rotor</code> file somewhere you trust (it's encrypted, so
+        any cloud folder works), and put a copy on a second device.
+      </p>
+    </div>
+  </section>
+
+  <div class="footer">
+    <p>
+      Ready to try it? &nbsp;
+      <a href="index.html"><strong>Open Rotor &rarr;</strong></a>
+    </p>
+    <p style="margin-top:8px;">
+      Source: <a href="https://github.com/NakliTechie/rotor" target="_blank" rel="noopener">github.com/NakliTechie/rotor</a>
+      &nbsp;&middot;&nbsp;
+      Part of the <a href="https://naklitechie.github.io/" target="_blank" rel="noopener">NakliTechie</a> series of
+      single&#8209;file, browser&#8209;native, no&#8209;backend tools.
+    </p>
+  </div>
+
+</div>
+
+<div class="footer-nav">
+  <a href="https://naklitechie.github.io/" target="_blank" rel="noopener">&#x2B05; More Projects</a>
+  <a href="https://github.com/NakliTechie/rotor" target="_blank" rel="noopener">&#x2328; Source</a>
+</div>
+
+</body>
+</html>
