@@ -1,9 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <!-- Rotor countdown-ring mark. Transparent background so both light and
-       dark browser chrome work. 75% arc = "45s elapsed of 60s" feel. -->
+  <!-- Rotor countdown-ring mark. Bengara (Rangrez urushi palette). -->
   <circle cx="32" cy="32" r="24"
           fill="none"
-          stroke="#7cc4ff"
+          stroke="#c8512a"
           stroke-width="8"
           stroke-linecap="round"
           pathLength="100"
