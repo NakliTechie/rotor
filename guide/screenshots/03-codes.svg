@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 390 700" width="390" height="700">
+  <rect width="390" height="700" fill="#15100c"/>
+
+  <!-- Topbar -->
+  <line x1="0" y1="52" x2="390" y2="52" stroke="#2e241b" stroke-width="1"/>
+  <text x="20" y="34" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-weight="800" font-size="18" letter-spacing="1" fill="#c8512a">ROTOR</text>
+  <rect x="104" y="18" width="82" height="20" rx="5" fill="#221a13" stroke="#2e241b" stroke-width="1"/>
+  <text x="145" y="32" text-anchor="middle" font-family="ui-monospace,Menlo,monospace" font-size="10" fill="#8a7a5a">my-codes</text>
+  <rect x="332" y="16" width="42" height="24" rx="6" fill="#221a13" stroke="#2e241b" stroke-width="1"/>
+  <text x="353" y="33" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="12" fill="#f5e6c8">Lock</text>
+
+  <!-- Toolbar: search + add -->
+  <rect x="20" y="66" width="270" height="36" rx="8" fill="#221a13" stroke="#2e241b" stroke-width="1"/>
+  <text x="40" y="89" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="13" fill="#5a4a30">Search codes…</text>
+  <rect x="300" y="66" width="74" height="36" rx="8" fill="#c8512a"/>
+  <text x="337" y="89" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-weight="700" font-size="13" fill="#15100c">＋ Add</text>
+
+  <!-- ═══ Codes grid: 2 columns ═══ -->
+  <!-- Row 1 -->
+
+  <!-- Tile: GitHub (pinned) -->
+  <rect x="20" y="122" width="168" height="130" rx="12" fill="#1e1813" stroke="#c8512a" stroke-width="1.5"/>
+  <text x="36" y="144" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-weight="600" font-size="13" fill="#f5e6c8">GitHub</text>
+  <text x="170" y="142" text-anchor="end" font-size="13" fill="#d4a94a">★</text>
+  <text x="36" y="160" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="11" fill="#8a7a5a">chirag@github.com</text>
+  <!-- Code value -->
+  <text x="36" y="194" font-family="ui-monospace,Menlo,monospace" font-weight="700" font-size="24" letter-spacing="4" fill="#c8512a">482 031</text>
+  <!-- Ring (67% remaining) -->
+  <g transform="translate(152,182)">
+    <circle cx="0" cy="0" r="16" fill="none" stroke="#2e241b" stroke-width="3"/>
+    <circle cx="0" cy="0" r="16" fill="none" stroke="#c8512a" stroke-width="3" stroke-linecap="round"
+      stroke-dasharray="100.5" stroke-dashoffset="33.2" transform="rotate(-90)"/>
+  </g>
+
+  <!-- Tile: Google -->
+  <rect x="202" y="122" width="168" height="130" rx="12" fill="#1e1813" stroke="#2e241b" stroke-width="1"/>
+  <text x="218" y="144" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-weight="600" font-size="13" fill="#f5e6c8">Google</text>
+  <text x="218" y="160" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="11" fill="#8a7a5a">Google</text>
+  <text x="218" y="194" font-family="ui-monospace,Menlo,monospace" font-weight="700" font-size="24" letter-spacing="4" fill="#c8512a">719 405</text>
+  <g transform="translate(334,182)">
+    <circle cx="0" cy="0" r="16" fill="none" stroke="#2e241b" stroke-width="3"/>
+    <circle cx="0" cy="0" r="16" fill="none" stroke="#c8512a" stroke-width="3" stroke-linecap="round"
+      stroke-dasharray="100.5" stroke-dashoffset="55.3" transform="rotate(-90)"/>
+  </g>
+
+  <!-- Row 2 -->
+
+  <!-- Tile: Dropbox (expiring) -->
+  <rect x="20" y="264" width="168" height="130" rx="12" fill="#1e1813" stroke="#2e241b" stroke-width="1"/>
+  <text x="36" y="286" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-weight="600" font-size="13" fill="#f5e6c8">Dropbox</text>
+  <text x="36" y="302" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="11" fill="#8a7a5a">dropbox.com</text>
+  <!-- Expiring code in red -->
+  <text x="36" y="336" font-family="ui-monospace,Menlo,monospace" font-weight="700" font-size="24" letter-spacing="4" fill="#d64a3a">034 821</text>
+  <g transform="translate(152,324)">
+    <circle cx="0" cy="0" r="16" fill="none" stroke="#2e241b" stroke-width="3"/>
+    <circle cx="0" cy="0" r="16" fill="none" stroke="#d64a3a" stroke-width="3" stroke-linecap="round"
+      stroke-dasharray="100.5" stroke-dashoffset="93.5" transform="rotate(-90)"/>
+  </g>
+  <!-- Next code preview -->
+  <text x="36" y="372" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="10" fill="#8a7a5a">next:</text>
+  <text x="70" y="372" font-family="ui-monospace,Menlo,monospace" font-size="11" font-weight="700" letter-spacing="2" fill="#d4a94a">192 740</text>
+
+  <!-- Tile: AWS -->
+  <rect x="202" y="264" width="168" height="130" rx="12" fill="#1e1813" stroke="#2e241b" stroke-width="1"/>
+  <text x="218" y="286" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-weight="600" font-size="13" fill="#f5e6c8">AWS</text>
+  <text x="218" y="302" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="11" fill="#8a7a5a">Amazon</text>
+  <text x="218" y="336" font-family="ui-monospace,Menlo,monospace" font-weight="700" font-size="24" letter-spacing="4" fill="#c8512a">256 109</text>
+  <g transform="translate(334,324)">
+    <circle cx="0" cy="0" r="16" fill="none" stroke="#2e241b" stroke-width="3"/>
+    <circle cx="0" cy="0" r="16" fill="none" stroke="#c8512a" stroke-width="3" stroke-linecap="round"
+      stroke-dasharray="100.5" stroke-dashoffset="12.1" transform="rotate(-90)"/>
+  </g>
+
+  <!-- Row 3 -->
+
+  <!-- Tile: Cloudflare -->
+  <rect x="20" y="406" width="168" height="130" rx="12" fill="#1e1813" stroke="#2e241b" stroke-width="1"/>
+  <text x="36" y="428" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-weight="600" font-size="13" fill="#f5e6c8">Cloudflare</text>
+  <text x="36" y="444" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="11" fill="#8a7a5a">chirag@work</text>
+  <text x="36" y="478" font-family="ui-monospace,Menlo,monospace" font-weight="700" font-size="24" letter-spacing="4" fill="#c8512a">841 362</text>
+  <g transform="translate(152,466)">
+    <circle cx="0" cy="0" r="16" fill="none" stroke="#2e241b" stroke-width="3"/>
+    <circle cx="0" cy="0" r="16" fill="none" stroke="#c8512a" stroke-width="3" stroke-linecap="round"
+      stroke-dasharray="100.5" stroke-dashoffset="70.3" transform="rotate(-90)"/>
+  </g>
+
+  <!-- Tile: Bank -->
+  <rect x="202" y="406" width="168" height="130" rx="12" fill="#1e1813" stroke="#2e241b" stroke-width="1"/>
+  <text x="218" y="428" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-weight="600" font-size="13" fill="#f5e6c8">Bank (India)</text>
+  <text x="218" y="444" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="11" fill="#8a7a5a">acct ••4291</text>
+  <text x="218" y="478" font-family="ui-monospace,Menlo,monospace" font-weight="700" font-size="24" letter-spacing="4" fill="#c8512a">605 237</text>
+  <g transform="translate(334,466)">
+    <circle cx="0" cy="0" r="16" fill="none" stroke="#2e241b" stroke-width="3"/>
+    <circle cx="0" cy="0" r="16" fill="none" stroke="#c8512a" stroke-width="3" stroke-linecap="round"
+      stroke-dasharray="100.5" stroke-dashoffset="22.1" transform="rotate(-90)"/>
+  </g>
+</svg>

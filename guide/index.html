@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<meta http-equiv="Content-Security-Policy" content="
+  default-src 'none';
+  script-src 'none';
+  style-src 'unsafe-inline';
+  img-src 'self';
+  base-uri 'none';
+  form-action 'none';
+  frame-ancestors 'none';
+">
+<title>Rotor — Guide &amp; Trust Notes</title>
+<style>
+/* Urushi — Rangrez japan-10. Wajima lacquerware, kintsugi gold on deep warm black. */
+:root {
+  --bg: #15100c;
+  --panel: #1e1813;
+  --panel-2: #221a13;
+  --border: #2e241b;
+  --text: #f5e6c8;
+  --muted: #8a7a5a;
+  --accent: #c8512a;
+  --accent-ink: #15100c;
+  --warn: #d4a94a;
+  --ok: #7a9a3a;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); font-family: var(--sans); -webkit-text-size-adjust: 100%; }
+body { line-height: 1.65; }
+a { color: var(--accent); }
+.wrap { max-width: 900px; margin: 0 auto; padding: 32px 22px 120px; }
+
+/* ── Topbar ─────────────────────────────────────────────── */
+.topbar { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 28px; flex-wrap: wrap; gap: 12px; }
+.brand { display: flex; align-items: baseline; gap: 10px; }
+.brand h1 { margin: 0; font-size: 22px; font-weight: 800; letter-spacing: 1px; color: var(--accent); }
+.brand .tag { color: var(--muted); font-size: 12px; font-family: var(--mono); }
+.topbar-links { display: flex; gap: 8px; flex-wrap: wrap; }
+.topbar-links a {
+  background: var(--panel); border: 1px solid var(--border);
+  color: var(--text); text-decoration: none;
+  padding: 6px 12px; border-radius: 6px; font-size: 13px;
+  transition: border-color 0.15s, color 0.15s;
+}
+.topbar-links a:hover { border-color: var(--accent); color: var(--accent); }
+.topbar-links a.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+.topbar-links a.primary:hover { filter: brightness(1.08); color: var(--accent-ink); }
+
+/* ── Hero ─────────────────────────────────────────────────── */
+.hero { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 28px; margin-bottom: 28px; }
+.hero h2 { margin: 0 0 12px; font-size: 26px; line-height: 1.25; }
+.hero p { margin: 0 0 12px; font-size: 15.5px; }
+.hero p:last-child { margin-bottom: 0; }
+.hero .lead { color: var(--muted); }
+
+/* ── Sections ─────────────────────────────────────────────── */
+section { margin-bottom: 48px; }
+section > h2 { margin: 0 0 6px; font-size: 20px; color: var(--text); border-left: 3px solid var(--accent); padding-left: 12px; }
+section > .sub { color: var(--muted); margin: 0 0 20px 15px; font-size: 14px; }
+
+/* ── Cards ─────────────────────────────────────────────────── */
+.cards { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+.card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 18px; }
+.card h3 { margin: 0 0 8px; font-size: 12px; color: var(--accent); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700; }
+.card p { margin: 0; font-size: 14px; color: var(--text); }
+.card p + p { margin-top: 8px; }
+.card code { background: var(--panel-2); padding: 1px 6px; border-radius: 4px; font-size: 12px; word-break: break-all; }
+
+/* ── Flow ─────────────────────────────────────────────────── */
+.flow { display: grid; gap: 24px; }
+.step {
+  display: grid;
+  grid-template-columns: 230px 1fr;
+  gap: 28px;
+  background: var(--panel); border: 1px solid var(--border);
+  border-radius: 12px; padding: 22px;
+  align-items: center;
+}
+@media (max-width: 680px) {
+  .step { grid-template-columns: 1fr; }
+  .phone-wrap { order: -1; }
+}
+.step .num { display: inline-block; background: var(--panel-2); color: var(--accent); font-family: var(--mono); font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 4px; margin-bottom: 8px; }
+.step h4 { margin: 0 0 10px; font-size: 17px; }
+.step p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.6; }
+.step p + p { margin-top: 8px; }
+.step code { background: var(--panel-2); padding: 1px 6px; border-radius: 4px; font-size: 12px; color: var(--text); }
+
+/* ── Phone frame ─────────────────────────────────────────── */
+.phone-wrap { display: flex; justify-content: center; }
+.phone {
+  width: 210px;
+  height: 428px;
+  background: #060402;
+  border-radius: 34px;
+  border: 5px solid #2a2118;
+  box-shadow: 0 0 0 1px #111, 0 20px 60px rgba(0,0,0,0.55);
+  overflow: hidden;
+  position: relative;
+  flex-shrink: 0;
+}
+.phone::before {
+  content: '';
+  position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+  width: 72px; height: 13px;
+  background: #060402;
+  border-radius: 0 0 12px 12px;
+  z-index: 10;
+}
+.phone img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top center;
+}
+
+/* ── Warn box ─────────────────────────────────────────────── */
+.warn { background: rgba(212,169,74,0.1); border: 1px solid rgba(212,169,74,0.35); color: var(--warn); padding: 14px 16px; border-radius: 10px; font-size: 14px; line-height: 1.6; margin-bottom: 16px; }
+.warn strong { color: var(--warn); }
+
+/* ── Table ─────────────────────────────────────────────────── */
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); }
+th { font-size: 11px; color: var(--accent); text-transform: uppercase; letter-spacing: 0.5px; background: var(--panel-2); font-weight: 700; }
+td:first-child { font-family: var(--mono); font-size: 12.5px; white-space: nowrap; }
+td:last-child { color: var(--muted); }
+
+/* ── Footer ─────────────────────────────────────────────────── */
+.footer { margin-top: 50px; padding-top: 22px; border-top: 1px solid var(--border); text-align: center; font-size: 13px; color: var(--muted); }
+.footer a { color: var(--accent); text-decoration: none; }
+.footer a:hover { text-decoration: underline; }
+
+.footer-nav {
+  position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%);
+  display: flex; gap: 24px;
+  background: var(--panel); border: 1px solid var(--border);
+  padding: 6px 18px; border-radius: 20px;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.15);
+  font-size: 12px; white-space: nowrap; z-index: 50;
+}
+.footer-nav a { color: var(--accent); text-decoration: none; }
+.footer-nav a:hover { opacity: 0.7; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <div class="topbar">
+    <div class="brand">
+      <h1>ROTOR</h1>
+      <span class="tag">guide &amp; trust notes</span>
+    </div>
+    <div class="topbar-links">
+      <a href="../" class="primary">&larr; Back to app</a>
+      <a href="https://github.com/NakliTechie/Rotor" target="_blank" rel="noopener">Source</a>
+      <a href="../README.md" target="_blank" rel="noopener">README</a>
+    </div>
+  </div>
+
+  <div class="hero">
+    <h2>One job. Rotating TOTP codes. Nothing else.</h2>
+    <p class="lead">
+      Rotor is a browser-native TOTP authenticator. It generates the six-digit
+      codes your bank and your email ask for at login. It does not store
+      passwords, cards, notes, or anything else — and it never will.
+      <strong>No server, no account, no company holding your secrets.</strong>
+    </p>
+    <p>
+      This page shows every screen of the app, explains how it's built, and is
+      honest about the tradeoffs. Trusting a browser app with your second
+      authentication factor is a big ask — here's everything you need to make
+      that decision.
+    </p>
+  </div>
+
+  <!-- ═══════ THREE WAYS ═══════ -->
+  <section>
+    <h2>Three ways to run it</h2>
+    <p class="sub">Pick whichever you trust most. They all do the same thing.</p>
+    <div class="cards">
+      <div class="card">
+        <h3>1. Open the URL</h3>
+        <p>
+          <a href="https://rotor.naklitechie.com">rotor.naklitechie.com</a>
+          — loads once and caches itself via service worker. After the first
+          visit it works fully offline, forever. Zero network requests at runtime.
+        </p>
+      </div>
+      <div class="card">
+        <h3>2. Save the page</h3>
+        <p>
+          File → Save Page As → <code>index.html</code>. Open it from disk any
+          time. One HTML file plus a 25-line service worker. Works on any
+          modern browser, any device, offline.
+        </p>
+      </div>
+      <div class="card">
+        <h3>3. Clone and read</h3>
+        <p>
+          <a href="https://github.com/NakliTechie/Rotor" target="_blank" rel="noopener">github.com/NakliTechie/Rotor</a>
+          — read every line, then serve with <code>python3 -m http.server</code>.
+          No build step. No dependencies to audit. Verify the RFC 6238 self-test passes in DevTools.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════ FLOW ═══════ -->
+  <section>
+    <h2>The full user flow</h2>
+    <p class="sub">Every screen in order, mobile view.</p>
+
+    <div class="flow">
+
+      <div class="step">
+        <div class="phone-wrap">
+          <div class="phone">
+            <img src="screenshots/01-welcome.svg" alt="Rotor welcome screen — Create new vault and Open vault buttons">
+          </div>
+        </div>
+        <div>
+          <span class="num">01 / WELCOME</span>
+          <h4>First visit: create or open a vault.</h4>
+          <p>
+            On desktop (Chrome, Edge, Firefox), <strong>Create new vault</strong>
+            opens the folder picker — point at an empty folder, set a master
+            password, and the vault is created there. On iOS or mobile browsers
+            without the folder picker, Rotor uses the browser's Origin Private
+            File System — just name the vault.
+          </p>
+          <p>
+            On return visits, Rotor reconnects silently and skips straight to
+            the Unlock screen. No permission prompt unless you're on desktop
+            and the browser session has expired the folder handle.
+          </p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="phone-wrap">
+          <div class="phone">
+            <img src="screenshots/02-create.svg" alt="Rotor create vault screen — device name, master password, entropy bar">
+          </div>
+        </div>
+        <div>
+          <span class="num">02 / CREATE VAULT</span>
+          <h4>Name this device. Set the master password.</h4>
+          <p>
+            The device name labels this browser's event stream in the roster.
+            The entropy meter gives live feedback — aim for at least 50 bits
+            (four random words is fine).
+          </p>
+          <p>
+            <strong>The yellow box is not decoration.</strong> Rotor cannot
+            reset your master password. It has never seen it. If you lose it,
+            your TOTP secrets are unrecoverable from this vault — you'd have to
+            re-pair each account with its 2FA issuer.
+          </p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="phone-wrap">
+          <div class="phone">
+            <img src="screenshots/03-codes.svg" alt="Rotor codes grid — TOTP tiles with countdown rings and next-code preview">
+          </div>
+        </div>
+        <div>
+          <span class="num">03 / CODES GRID</span>
+          <h4>Every TOTP code at a glance, always ticking.</h4>
+          <p>
+            Each tile shows the label, issuer / account, current code, and a
+            ring counting down to rotation. Pinned codes sort first (star icon
+            to toggle). Tap or click any tile to copy.
+          </p>
+          <p>
+            When a code enters its last ~5 seconds, it turns red and the
+            <em>next</em> code appears below for smooth handoff — no panicked
+            refresh halfway through a login. Search codes live with the search
+            field.
+          </p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="phone-wrap">
+          <div class="phone">
+            <img src="screenshots/04-add-code.svg" alt="Rotor add code modal — otpauth URI, secret, algorithm, digits, period">
+          </div>
+        </div>
+        <div>
+          <span class="num">04 / ADD CODE</span>
+          <h4>Paste an otpauth:// URI or type the secret manually.</h4>
+          <p>
+            The top field accepts an <code>otpauth://totp/</code> URI — paste
+            it and Label, Account, Issuer, Algorithm, Digits, and Period fill
+            in automatically. Most 2FA setup pages offer a "can't scan?" link
+            that reveals the URI.
+          </p>
+          <p>
+            The secret is AES-256-GCM encrypted in the event log; nothing
+            about your TOTP configuration touches disk in plaintext.
+          </p>
+          <p>
+            Bulk import: Settings → Data → Import codes → <strong>otpauth://
+            URIs</strong> — paste one URI per line to import many at once.
+          </p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="phone-wrap">
+          <div class="phone">
+            <img src="screenshots/05-devices.svg" alt="Rotor Settings Devices tab — device roster with this-device badge and Revoke button">
+          </div>
+        </div>
+        <div>
+          <span class="num">05 / DEVICES</span>
+          <h4>Every device that has ever written to the vault.</h4>
+          <p>
+            When a second browser opens the vault folder, Rotor detects it's a
+            new device, asks for the master password to verify, adds a
+            <code>device_registered</code> event, and starts its own event
+            stream. No coordination needed.
+          </p>
+          <p>
+            <strong>Revoking</strong> a device emits a <code>device_revoked</code>
+            event. On the next merge, events from that device timestamped after
+            the revocation are skipped. Lost a phone with a synced vault?
+            Revoke it from any other device.
+          </p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="phone-wrap">
+          <div class="phone">
+            <img src="screenshots/06-unlock.svg" alt="Rotor unlock screen — master password field, Unlock button">
+          </div>
+        </div>
+        <div>
+          <span class="num">06 / UNLOCK</span>
+          <h4>The master password is the only key. No back door.</h4>
+          <p>
+            The derived key is held in memory only while unlocked. Idle
+            timeout, the Lock button, or tab-hide lock wipes it from memory.
+          </p>
+          <p>
+            Wrong passwords are rejected by AES-GCM's authentication tag —
+            there is no "close enough." Rotor doesn't phone home with failed
+            attempts because it can't — check DevTools → Network.
+          </p>
+          <p>
+            <strong>Different vault</strong> (or "Different folder" on desktop)
+            lets you point at another vault without reloading — useful if you
+            keep separate work and personal vaults.
+          </p>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ═══════ HOW IT'S BUILT ═══════ -->
+  <section>
+    <h2>How it's built</h2>
+    <p class="sub">Every claim below is verifiable by reading <code>index.html</code> — one file, no build.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Concern</th><th>Implementation</th></tr></thead>
+        <tbody>
+          <tr><td>TOTP</td><td>RFC 6238 over WebCrypto HMAC-SHA-{1,256,512}. Base32 decoder inline (~20 lines). No library. Four RFC 6238 Appendix B test vectors verified on every boot — watch DevTools console.</td></tr>
+          <tr><td>Key derivation</td><td>PBKDF2-SHA-256, 600,000 iterations. Web Crypto API only.</td></tr>
+          <tr><td>Entry encryption</td><td>AES-256-GCM, random 12-byte nonce per event. TOTP secret is encrypted to opaque base64 inside the event log.</td></tr>
+          <tr><td>Hash chain</td><td>SHA-256 of previous raw event-line string, embedded as <code>prev_hash</code>. Break any byte, break the chain. Verifiable in-app via Settings → Vault.</td></tr>
+          <tr><td>File I/O</td><td>File System Access API (<code>showDirectoryPicker</code>) on desktop; Origin Private File System (<code>navigator.storage.getDirectory()</code>) on iOS and other mobile browsers. Same file format, different backing store.</td></tr>
+          <tr><td>Offline</td><td>25-line service worker caches the app shell. Cache-first, no network after install.</td></tr>
+          <tr><td>Network requests</td><td>Zero after page load. CSP has <code>connect-src 'none'</code>. Open DevTools and verify.</td></tr>
+          <tr><td>Dependencies</td><td>Zero. No CDN, no npm, no framework.</td></tr>
+          <tr><td>Build step</td><td>None. The source file is the app.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ═══════ TRADEOFFS ═══════ -->
+  <section>
+    <h2>Tradeoffs you're accepting</h2>
+    <p class="sub">Honest about what this model costs you.</p>
+
+    <div class="warn">
+      <strong>No recovery.</strong> The master password is never transmitted
+      or stored. Lose it and the vault contents are unrecoverable — you'd have
+      to re-pair every 2FA account at its source.
+      <strong>Back up regularly</strong> — Settings → Data → Export encrypted
+      archive. Drop the <code>.rotor</code> file in a cloud folder; it is
+      AES-256-GCM encrypted with your master password.
+    </div>
+
+    <div class="cards">
+      <div class="card">
+        <h3>Rotor does one thing</h3>
+        <p>No passwords, cards, or notes — ever. If you want those plus codes under one master password, use <a href="https://tijori.naklitechie.com" target="_blank" rel="noopener">Tijori</a>, the sibling app that shares this engine. Rotor exists for users who want their second factor to live on a different footing.</p>
+      </div>
+      <div class="card">
+        <h3>Don't combine with Tijori</h3>
+        <p>Rotor and Tijori share the same file format because they share the same engine, but the whole point of using Rotor is strict separation. Keep them in separate folders with separate master passwords. Pointing both at one folder defeats the purpose.</p>
+      </div>
+      <div class="card">
+        <h3>Silent LWW merge</h3>
+        <p>Merge is per-field last-writer-wins, sorted by timestamp. Two devices editing the same field concurrently: the later timestamp wins. No diff UI — the result is deterministic and silent.</p>
+      </div>
+      <div class="card">
+        <h3>Soft revocation</h3>
+        <p>Revoking a device prevents its future events from being merged. It does not re-encrypt the vault. A revoked device that already has a copy can still decrypt with the master password. Full remediation: revocation + master password change.</p>
+      </div>
+      <div class="card">
+        <h3>Browser-stored on mobile</h3>
+        <p>On iOS and mobile browsers without the File System Access API, your vault lives in the browser's private storage (OPFS). Clearing site data wipes it. Back up to an encrypted archive or use QR sync to move it to a desktop vault.</p>
+      </div>
+      <div class="card">
+        <h3>Plaintext escape hatch</h3>
+        <p>Settings → Data → Export plaintext otpauth:// list produces one URI per line, feedable to any other authenticator. Trade-off: unencrypted. Handle like a password file.</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="footer">
+    <p>
+      Rotor is part of the <a href="https://naklitechie.github.io/" target="_blank" rel="noopener">NakliTechie</a> series —
+      single-file, browser-native, no-backend tools by
+      <a href="https://chiragpatnaik.com" target="_blank" rel="noopener">Chirag Patnaik</a>.
+    </p>
+    <p style="margin-top:8px">
+      <a href="https://github.com/NakliTechie/Rotor" target="_blank" rel="noopener">Source on GitHub</a> &middot;
+      <a href="../README.md">README</a> &middot;
+      MIT License
+    </p>
+  </div>
+
+</div>
+
+<div class="footer-nav">
+  <a href="../">&larr; Back to app</a>
+  <a href="https://naklitechie.github.io/" target="_blank" rel="noopener">More projects</a>
+</div>
+
+</body>
+</html>

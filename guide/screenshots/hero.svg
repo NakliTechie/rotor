@@ -1,0 +1,145 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 600" width="1080" height="600">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1a120d"/>
+      <stop offset="1" stop-color="#0d0906"/>
+    </linearGradient>
+    <filter id="shadow" x="-0.2" y="-0.2" width="1.4" height="1.4">
+      <feDropShadow dx="0" dy="14" stdDeviation="18" flood-color="#000" flood-opacity="0.6"/>
+    </filter>
+  </defs>
+
+  <rect width="1080" height="600" fill="url(#bg)"/>
+
+  <!-- Title -->
+  <text x="540" y="76" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-weight="800" font-size="44" letter-spacing="12" fill="#c8512a">ROTOR</text>
+  <text x="540" y="104" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="15" fill="#8a7a5a">browser-native TOTP authenticator · no server · no account</text>
+
+  <!-- ═══ Left phone: Unlock ═══ -->
+  <g transform="translate(90,140)" filter="url(#shadow)">
+    <rect width="240" height="430" rx="30" fill="#060402" stroke="#2a2118" stroke-width="5"/>
+    <rect x="88" y="5" width="64" height="11" rx="0 0 10 10" fill="#060402"/>
+    <rect x="12" y="25" width="216" height="395" rx="20" fill="#15100c"/>
+    <!-- Brand -->
+    <text x="120" y="130" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-weight="800" font-size="26" letter-spacing="3" fill="#c8512a">ROTOR</text>
+    <!-- Folder chip -->
+    <rect x="90" y="148" width="60" height="16" rx="4" fill="#221a13" stroke="#2e241b"/>
+    <text x="120" y="160" text-anchor="middle" font-family="ui-monospace,Menlo,monospace" font-size="8" fill="#8a7a5a">my-codes</text>
+    <!-- Password field -->
+    <text x="28" y="198" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="10" fill="#8a7a5a">Master password</text>
+    <rect x="28" y="208" width="184" height="32" rx="7" fill="#221a13" stroke="#2e241b"/>
+    <text x="38" y="229" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="12" fill="#f5e6c8" letter-spacing="2">••••••••••</text>
+    <!-- Buttons -->
+    <rect x="28" y="270" width="88" height="30" rx="6" fill="#221a13" stroke="#2e241b"/>
+    <text x="72" y="289" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="10" fill="#8a7a5a">Different vault</text>
+    <rect x="124" y="270" width="88" height="30" rx="6" fill="#c8512a"/>
+    <text x="168" y="289" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-weight="700" font-size="12" fill="#15100c">Unlock</text>
+    <!-- Caption -->
+    <text x="120" y="380" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="11" fill="#f5e6c8">Unlock</text>
+  </g>
+
+  <!-- ═══ Center phone: Codes grid (highlighted) ═══ -->
+  <g transform="translate(420,110)" filter="url(#shadow)">
+    <rect width="240" height="460" rx="30" fill="#060402" stroke="#c8512a" stroke-width="5"/>
+    <rect x="88" y="5" width="64" height="11" rx="0 0 10 10" fill="#060402"/>
+    <rect x="12" y="25" width="216" height="425" rx="20" fill="#15100c"/>
+    <!-- Topbar -->
+    <text x="24" y="48" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-weight="800" font-size="12" letter-spacing="1" fill="#c8512a">ROTOR</text>
+    <rect x="72" y="38" width="52" height="14" rx="3" fill="#221a13" stroke="#2e241b"/>
+    <text x="98" y="48" text-anchor="middle" font-family="ui-monospace,Menlo,monospace" font-size="7" fill="#8a7a5a">my-codes</text>
+    <rect x="200" y="36" width="26" height="16" rx="4" fill="#221a13" stroke="#2e241b"/>
+    <text x="213" y="48" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="8" fill="#f5e6c8">Lock</text>
+
+    <!-- Tile 1: GitHub (pinned) -->
+    <rect x="22" y="70" width="90" height="80" rx="8" fill="#1e1813" stroke="#c8512a" stroke-width="1.2"/>
+    <text x="30" y="86" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-weight="600" font-size="9" fill="#f5e6c8">GitHub</text>
+    <text x="104" y="85" text-anchor="end" font-size="8" fill="#d4a94a">★</text>
+    <text x="30" y="116" font-family="ui-monospace,Menlo,monospace" font-weight="700" font-size="14" letter-spacing="2" fill="#c8512a">482 031</text>
+    <g transform="translate(92,135)">
+      <circle cx="0" cy="0" r="9" fill="none" stroke="#2e241b" stroke-width="2"/>
+      <circle cx="0" cy="0" r="9" fill="none" stroke="#c8512a" stroke-width="2" stroke-linecap="round" stroke-dasharray="56.5" stroke-dashoffset="19" transform="rotate(-90)"/>
+    </g>
+
+    <!-- Tile 2: Google -->
+    <rect x="128" y="70" width="90" height="80" rx="8" fill="#1e1813" stroke="#2e241b"/>
+    <text x="136" y="86" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-weight="600" font-size="9" fill="#f5e6c8">Google</text>
+    <text x="136" y="116" font-family="ui-monospace,Menlo,monospace" font-weight="700" font-size="14" letter-spacing="2" fill="#c8512a">719 405</text>
+    <g transform="translate(198,135)">
+      <circle cx="0" cy="0" r="9" fill="none" stroke="#2e241b" stroke-width="2"/>
+      <circle cx="0" cy="0" r="9" fill="none" stroke="#c8512a" stroke-width="2" stroke-linecap="round" stroke-dasharray="56.5" stroke-dashoffset="32" transform="rotate(-90)"/>
+    </g>
+
+    <!-- Tile 3: Dropbox (expiring) -->
+    <rect x="22" y="162" width="90" height="80" rx="8" fill="#1e1813" stroke="#2e241b"/>
+    <text x="30" y="178" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-weight="600" font-size="9" fill="#f5e6c8">Dropbox</text>
+    <text x="30" y="208" font-family="ui-monospace,Menlo,monospace" font-weight="700" font-size="14" letter-spacing="2" fill="#d64a3a">034 821</text>
+    <text x="30" y="228" font-family="ui-monospace,Menlo,monospace" font-size="8" fill="#d4a94a" letter-spacing="1">next: 192 740</text>
+    <g transform="translate(92,225)">
+      <circle cx="0" cy="0" r="9" fill="none" stroke="#2e241b" stroke-width="2"/>
+      <circle cx="0" cy="0" r="9" fill="none" stroke="#d64a3a" stroke-width="2" stroke-linecap="round" stroke-dasharray="56.5" stroke-dashoffset="53" transform="rotate(-90)"/>
+    </g>
+
+    <!-- Tile 4: AWS -->
+    <rect x="128" y="162" width="90" height="80" rx="8" fill="#1e1813" stroke="#2e241b"/>
+    <text x="136" y="178" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-weight="600" font-size="9" fill="#f5e6c8">AWS</text>
+    <text x="136" y="208" font-family="ui-monospace,Menlo,monospace" font-weight="700" font-size="14" letter-spacing="2" fill="#c8512a">256 109</text>
+    <g transform="translate(198,225)">
+      <circle cx="0" cy="0" r="9" fill="none" stroke="#2e241b" stroke-width="2"/>
+      <circle cx="0" cy="0" r="9" fill="none" stroke="#c8512a" stroke-width="2" stroke-linecap="round" stroke-dasharray="56.5" stroke-dashoffset="7" transform="rotate(-90)"/>
+    </g>
+
+    <!-- Tile 5: Cloudflare -->
+    <rect x="22" y="254" width="90" height="80" rx="8" fill="#1e1813" stroke="#2e241b"/>
+    <text x="30" y="270" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-weight="600" font-size="9" fill="#f5e6c8">Cloudflare</text>
+    <text x="30" y="300" font-family="ui-monospace,Menlo,monospace" font-weight="700" font-size="14" letter-spacing="2" fill="#c8512a">841 362</text>
+
+    <!-- Tile 6: Bank -->
+    <rect x="128" y="254" width="90" height="80" rx="8" fill="#1e1813" stroke="#2e241b"/>
+    <text x="136" y="270" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-weight="600" font-size="9" fill="#f5e6c8">Bank</text>
+    <text x="136" y="300" font-family="ui-monospace,Menlo,monospace" font-weight="700" font-size="14" letter-spacing="2" fill="#c8512a">605 237</text>
+
+    <!-- Caption -->
+    <text x="120" y="410" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="11" fill="#c8512a" font-weight="600">Codes at a glance</text>
+  </g>
+
+  <!-- ═══ Right phone: Add code ═══ -->
+  <g transform="translate(750,140)" filter="url(#shadow)">
+    <rect width="240" height="430" rx="30" fill="#060402" stroke="#2a2118" stroke-width="5"/>
+    <rect x="88" y="5" width="64" height="11" rx="0 0 10 10" fill="#060402"/>
+    <rect x="12" y="25" width="216" height="395" rx="20" fill="#15100c"/>
+    <text x="28" y="60" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-weight="700" font-size="16" fill="#f5e6c8">New code</text>
+
+    <!-- otpauth URI -->
+    <text x="28" y="92" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="9" fill="#8a7a5a">otpauth:// URI</text>
+    <rect x="28" y="100" width="184" height="26" rx="6" fill="#221a13" stroke="#2e241b"/>
+    <text x="38" y="118" font-family="ui-monospace,Menlo,monospace" font-size="9" fill="#8a7a5a">otpauth://totp/GitHub…</text>
+
+    <!-- Label -->
+    <text x="28" y="148" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="9" fill="#8a7a5a">Label</text>
+    <rect x="28" y="156" width="184" height="26" rx="6" fill="#221a13" stroke="#2e241b"/>
+    <text x="38" y="174" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="11" fill="#f5e6c8">GitHub</text>
+
+    <!-- Secret -->
+    <text x="28" y="202" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="9" fill="#8a7a5a">Secret (Base32)</text>
+    <rect x="28" y="210" width="184" height="26" rx="6" fill="#221a13" stroke="#2e241b"/>
+    <text x="38" y="228" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="11" fill="#8a7a5a" letter-spacing="1">••••••••••</text>
+
+    <!-- Algorithm/Digits/Period -->
+    <rect x="28" y="252" width="58" height="24" rx="5" fill="#221a13" stroke="#2e241b"/>
+    <text x="57" y="268" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="10" fill="#f5e6c8">SHA-1</text>
+    <rect x="91" y="252" width="58" height="24" rx="5" fill="#221a13" stroke="#2e241b"/>
+    <text x="120" y="268" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="10" fill="#f5e6c8">6</text>
+    <rect x="154" y="252" width="58" height="24" rx="5" fill="#221a13" stroke="#2e241b"/>
+    <text x="183" y="268" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="10" fill="#f5e6c8">30s</text>
+
+    <!-- Save button -->
+    <rect x="156" y="298" width="56" height="28" rx="6" fill="#c8512a"/>
+    <text x="184" y="316" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-weight="700" font-size="11" fill="#15100c">Save</text>
+
+    <!-- Caption -->
+    <text x="120" y="380" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="11" fill="#f5e6c8">Paste or type</text>
+  </g>
+
+  <!-- Bottom tag -->
+  <text x="540" y="570" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="13" fill="#8a7a5a">One job. Rotating codes. Nothing else.</text>
+</svg>

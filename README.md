@@ -1,6 +1,7 @@
 # Rotor
 
 &#x26AB; **Try it now &rarr; https://rotor.naklitechie.com/**
+&#x1F4D6; **Guide &amp; trust notes &rarr; https://rotor.naklitechie.com/guide/**
 
 **A TOTP authenticator in one HTML file.**
 

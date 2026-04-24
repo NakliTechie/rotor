@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 390 700" width="390" height="700">
+  <rect width="390" height="700" fill="#15100c"/>
+
+  <!-- Brand -->
+  <text x="195" y="268" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-weight="800" font-size="44" letter-spacing="8" fill="#c8512a">ROTOR</text>
+
+  <!-- Tagline -->
+  <text x="195" y="300" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="13" fill="#8a7a5a">browser-native TOTP authenticator · no server · no account</text>
+
+  <!-- Create button -->
+  <rect x="75" y="342" width="240" height="52" rx="11" fill="#c8512a"/>
+  <text x="195" y="374" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-weight="700" font-size="16" fill="#15100c">Create new vault</text>
+
+  <!-- Open button -->
+  <rect x="75" y="406" width="240" height="52" rx="11" fill="#221a13" stroke="#2e241b" stroke-width="1"/>
+  <text x="195" y="438" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-weight="600" font-size="16" fill="#f5e6c8">Open vault</text>
+
+  <!-- Footer -->
+  <text x="195" y="500" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="12" fill="#8a7a5a">No network requests after page load.</text>
+  <text x="195" y="520" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="12" fill="#8a7a5a">Your vault lives in a folder you choose.</text>
+</svg>
