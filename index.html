@@ -77,9 +77,10 @@ textarea { resize: vertical; min-height: 80px; }
 /* ── Welcome ────────────────────────────────────────────── */
 #screen-welcome {
   display: none; align-items: center; justify-content: center;
-  min-height: 100vh; padding: 24px 20px;
+  min-height: 100vh; padding: 24px 20px; position: relative;
 }
 #screen-welcome.active { display: flex; }
+.welcome-help { position: absolute; top: 20px; right: 20px; }
 .welcome-box { max-width: 400px; width: 100%; text-align: center; }
 .welcome-brand { font-size: 36px; font-weight: 800; letter-spacing: 2px; color: var(--accent); margin-bottom: 6px; }
 .welcome-tag { color: var(--muted); font-size: 14px; margin-bottom: 40px; }
@@ -403,6 +404,7 @@ textarea { resize: vertical; min-height: 80px; }
 
 <!-- ══════════════ SCREEN: WELCOME ══════════════ -->
 <section id="screen-welcome" class="screen">
+  <button class="btn-icon welcome-help" title="Help" onclick="showModal('modal-help')">?</button>
   <div class="welcome-box">
     <div class="welcome-brand">ROTOR</div>
     <div class="welcome-tag">browser-native TOTP authenticator · no server · no account</div>
