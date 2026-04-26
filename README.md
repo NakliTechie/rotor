@@ -141,6 +141,12 @@ Rotor is a single HTML file in every meaningful sense — `index.html` contains 
 - **Desktop** — Chrome, Edge, Firefox for the full folder-vault experience (File System Access API).
 - **Mobile / iOS** — Safari 16.4+, Chrome on iOS. Vault lives in the browser's Origin Private File System instead of a user-visible folder. Export regularly to a desktop vault or via QR sync.
 
+## Palette
+
+Coloured with **`japan-10 · 漆 URUSHI`** — Wajima lacquerware with kintsugi gold repair. Lacquer-black body, kintsugi-cream ink, cinnabar accent. Same palette as its sibling [Hue & Cry](https://github.com/NakliTechie/hueandcry); both reference Sanzo Wada and Wajima craft.
+
+Palette pulled from [**Rangrez**](https://github.com/NakliTechie/rangrez), the global colour-palette library that backs all NakliTechie projects.
+
 ## License
 
 MIT. See [`LICENSE`](LICENSE).
