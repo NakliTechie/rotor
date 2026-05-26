@@ -429,37 +429,39 @@ textarea { resize: vertical; min-height: 80px; }
     <button class="back-link" onclick="showScreen('welcome')">← Back</button>
     <h2>Create vault <span id="create-folder-tag" class="folder-tag"></span></h2>
     <p class="auth-sub" id="create-sub">Choose a master password and a name for this device. There is no recovery — back up regularly.</p>
-    <div class="field" id="create-vault-name-wrap" style="display:none">
-      <label for="create-vault-name">Vault name</label>
-      <input type="text" id="create-vault-name" placeholder="My Vault" maxlength="64" autocomplete="off">
-    </div>
-    <div class="warn-box">
-      <strong>No recovery.</strong> Forget the master password and your vault is gone. This is the cost of zero-knowledge.
-    </div>
-    <div class="field">
-      <label for="create-device-label">Device name</label>
-      <input type="text" id="create-device-label" placeholder="e.g. Chirag's MacBook" autocomplete="off" maxlength="64">
-    </div>
-    <div class="field">
-      <label for="create-password">Master password</label>
-      <div class="pw-wrap">
-        <input type="password" id="create-password" placeholder="at least 20 bits entropy" autocomplete="new-password"
-          oninput="updateEntropyMeter(this.value)">
-        <button class="pw-toggle" type="button" onclick="togglePw('create-password', this)">👁</button>
+    <form onsubmit="handleCreateVault();return false;">
+      <div class="field" id="create-vault-name-wrap" style="display:none">
+        <label for="create-vault-name">Vault name</label>
+        <input type="text" id="create-vault-name" placeholder="My Vault" maxlength="64" autocomplete="off">
       </div>
-      <div class="entropy-bar-wrap"><div class="entropy-bar" id="entropy-bar"></div></div>
-      <div class="entropy-label" id="entropy-label"></div>
-    </div>
-    <div class="field">
-      <label for="create-password2">Confirm password</label>
-      <div class="pw-wrap">
-        <input type="password" id="create-password2" placeholder="type it again" autocomplete="new-password">
-        <button class="pw-toggle" type="button" onclick="togglePw('create-password2', this)">👁</button>
+      <div class="warn-box">
+        <strong>No recovery.</strong> Forget the master password and your vault is gone. This is the cost of zero-knowledge.
       </div>
-    </div>
-    <div class="actions-bar">
-      <button class="btn" id="create-btn" onclick="handleCreateVault()">Create vault</button>
-    </div>
+      <div class="field">
+        <label for="create-device-label">Device name</label>
+        <input type="text" id="create-device-label" placeholder="e.g. Chirag's MacBook" autocomplete="off" maxlength="64">
+      </div>
+      <div class="field">
+        <label for="create-password">Master password</label>
+        <div class="pw-wrap">
+          <input type="password" id="create-password" placeholder="at least 20 bits entropy" autocomplete="new-password"
+            oninput="updateEntropyMeter(this.value)">
+          <button class="pw-toggle" type="button" onclick="togglePw('create-password', this)">👁</button>
+        </div>
+        <div class="entropy-bar-wrap"><div class="entropy-bar" id="entropy-bar"></div></div>
+        <div class="entropy-label" id="entropy-label"></div>
+      </div>
+      <div class="field">
+        <label for="create-password2">Confirm password</label>
+        <div class="pw-wrap">
+          <input type="password" id="create-password2" placeholder="type it again" autocomplete="new-password">
+          <button class="pw-toggle" type="button" onclick="togglePw('create-password2', this)">👁</button>
+        </div>
+      </div>
+      <div class="actions-bar">
+        <button class="btn" id="create-btn" type="submit">Create vault</button>
+      </div>
+    </form>
   </div>
 </section>
 
@@ -493,20 +495,22 @@ textarea { resize: vertical; min-height: 80px; }
     <button class="back-link" onclick="handleOpenExisting()">← Different folder</button>
     <h2>Register this device <span id="register-folder-tag" class="folder-tag"></span></h2>
     <p class="auth-sub">This vault hasn't been used in this browser before. Enter the master password to register.</p>
-    <div class="field">
-      <label for="register-device-label">Device name</label>
-      <input type="text" id="register-device-label" placeholder="e.g. Chirag's iPhone" autocomplete="off" maxlength="64">
-    </div>
-    <div class="field">
-      <label for="register-password">Master password</label>
-      <div class="pw-wrap">
-        <input type="password" id="register-password" placeholder="vault master password" autocomplete="current-password">
-        <button class="pw-toggle" type="button" onclick="togglePw('register-password', this)">👁</button>
+    <form onsubmit="handleRegisterDevice();return false;">
+      <div class="field">
+        <label for="register-device-label">Device name</label>
+        <input type="text" id="register-device-label" placeholder="e.g. Chirag's iPhone" autocomplete="off" maxlength="64">
       </div>
-    </div>
-    <div class="actions-bar">
-      <button class="btn" id="register-btn" onclick="handleRegisterDevice()">Register device</button>
-    </div>
+      <div class="field">
+        <label for="register-password">Master password</label>
+        <div class="pw-wrap">
+          <input type="password" id="register-password" placeholder="vault master password" autocomplete="current-password">
+          <button class="pw-toggle" type="button" onclick="togglePw('register-password', this)">👁</button>
+        </div>
+      </div>
+      <div class="actions-bar">
+        <button class="btn" id="register-btn" type="submit">Register device</button>
+      </div>
+    </form>
   </div>
 </section>
 
