@@ -16,3 +16,7 @@
 !.dev.vars.example
 .env*
 !.env.example
+
+# local-only working notes (already covered by the wildcard above, listed
+# explicitly so the intent survives future edits)
+plan/
