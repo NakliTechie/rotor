@@ -290,6 +290,34 @@ textarea { resize: vertical; min-height: 80px; }
 .help-body ul { margin: 0 0 10px; padding-left: 20px; }
 .help-body li { margin-bottom: 4px; }
 .help-body code { background: var(--panel-2); padding: 1px 6px; border-radius: 4px; font-size: 12px; }
+
+/* ── Vault audit ──────────────────────────────────────── */
+.audit-section { margin-bottom: 6px; }
+.audit-section summary {
+  cursor: pointer; padding: 8px 12px; background: var(--panel);
+  border: 1px solid var(--border); border-radius: var(--radius);
+  font-size: 13px; user-select: none; list-style: none;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.audit-section summary::-webkit-details-marker { display: none; }
+.audit-section[open] summary { border-radius: var(--radius) var(--radius) 0 0; border-bottom-color: transparent; }
+.audit-section .audit-count { font-family: var(--mono); font-size: 12px; }
+.audit-section.is-ok summary { color: var(--ok); }
+.audit-section.is-warn summary { color: var(--warn); }
+.audit-section.is-bad summary { color: var(--danger); }
+.audit-section .audit-body {
+  border: 1px solid var(--border); border-top: none;
+  border-radius: 0 0 var(--radius) var(--radius);
+  padding: 8px; max-height: 240px; overflow-y: auto;
+}
+.audit-entry {
+  cursor: pointer; padding: 6px 10px; border-radius: 4px;
+  display: flex; gap: 8px; align-items: center; font-size: 13px;
+}
+.audit-entry:hover { background: var(--panel-2); }
+.audit-entry .audit-entry-icon { flex-shrink: 0; }
+.audit-entry .audit-entry-meta { color: var(--muted); font-size: 11px; margin-left: auto; }
+.audit-section .audit-empty { padding: 8px; color: var(--muted); font-size: 12px; }
 .help-body .kbd {
   display: inline-block; background: var(--panel-2); border: 1px solid var(--border);
   border-bottom-width: 2px; border-radius: 4px; padding: 1px 6px;
@@ -608,6 +636,10 @@ textarea { resize: vertical; min-height: 80px; }
         <label>Recovery codes <span style="color:var(--muted);font-weight:400">(optional — paste the backup codes the service gave you)</span></label>
         <textarea id="code-recovery" rows="4" placeholder="one per line" autocomplete="off"></textarea>
       </div>
+      <div class="field">
+        <label>Notes <span style="color:var(--muted);font-weight:400">(optional — anything else worth remembering)</span></label>
+        <textarea id="code-notes" rows="3" placeholder="e.g. this is the work account, set up Apr 2026" autocomplete="off"></textarea>
+      </div>
     </div>
 
     <hr class="sep">
@@ -648,6 +680,7 @@ textarea { resize: vertical; min-height: 80px; }
         Rotor merges new device log files automatically on unlock.
       </p>
       <button class="btn secondary" style="width:100%;margin-bottom:8px" onclick="handleIntegrityCheck()">Verify log integrity</button>
+      <button class="btn secondary" style="width:100%;margin-bottom:8px" onclick="handleVaultAudit()">Run vault audit</button>
     </div>
 
     <!-- Devices tab -->
@@ -707,6 +740,22 @@ textarea { resize: vertical; min-height: 80px; }
     <hr class="sep">
     <div style="text-align:right">
       <button class="btn ghost btn-sm" onclick="hideModal('modal-settings')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ MODAL: VAULT AUDIT ══════════════ -->
+<div id="modal-vault-audit" class="modal-bg">
+  <div class="modal" style="max-width:520px">
+    <h3>Vault audit</h3>
+    <div id="audit-summary" style="font-size:13px;color:var(--muted);margin-bottom:14px"></div>
+    <div id="audit-results"></div>
+    <p style="font-size:11px;color:var(--muted);margin:14px 0 12px">
+      Results live in memory only and are discarded when you close this dialog.
+      Nothing is sent to any external service.
+    </p>
+    <div style="text-align:right">
+      <button class="btn ghost btn-sm" onclick="hideModal('modal-vault-audit')">Close</button>
     </div>
   </div>
 </div>
@@ -1578,6 +1627,7 @@ function openEntryModal(id) {
     $('code-digits').value = fv(entry, 'digits') || '6';
     $('code-period').value = fv(entry, 'period') || '30';
     $('code-recovery').value = fv(entry, 'recovery_codes') || '';
+    $('code-notes').value = fv(entry, 'notes') || '';
   }
 
   showModal('modal-entry');
@@ -1585,7 +1635,7 @@ function openEntryModal(id) {
 
 function clearEntryForm() {
   stopEntryQrScan?.();
-  ['code-uri','code-label','code-secret','code-account','code-issuer','code-recovery'].forEach(id => { const el = $(id); if (el) el.value = ''; });
+  ['code-uri','code-label','code-secret','code-account','code-issuer','code-recovery','code-notes'].forEach(id => { const el = $(id); if (el) el.value = ''; });
   $('code-algo').value = 'SHA-1';
   $('code-digits').value = '6';
   $('code-period').value = '30';
@@ -1610,7 +1660,8 @@ async function saveEntry() {
     algorithm: { v: $('code-algo').value, ts },
     digits: { v: $('code-digits').value, ts },
     period: { v: $('code-period').value, ts },
-    recovery_codes: { v: $('code-recovery').value.trim(), ts }
+    recovery_codes: { v: $('code-recovery').value.trim(), ts },
+    notes: { v: $('code-notes').value.trim(), ts }
   };
 
   if (isNew) {
@@ -2127,6 +2178,95 @@ function _resumeUnlockCountdownIfActive() {
   const lockState = _getLockoutState();
   const readyAt = lockState.lastFail + _backoffSeconds(lockState.count) * 1000;
   if (Date.now() < readyAt) _startUnlockCountdown(readyAt);
+}
+
+// ── Vault audit ──
+// TOTP-specific checks: no issuer, duplicate issuer+account, weak secret,
+// untouched 2+ years. Read-only, runs against the in-memory entries.
+
+function _auditEntryMaxTs(entry) {
+  let max = 0;
+  for (const k of Object.keys(entry?.fields || {})) {
+    const ts = entry.fields[k]?.ts;
+    if (typeof ts === 'string') {
+      const n = new Date(ts).getTime();
+      if (n > max) max = n;
+    }
+  }
+  return max;
+}
+
+function runVaultAudit() {
+  const entries = [...S.entries.values()].filter(e => !e.deleted);
+  const now = Date.now();
+  const TWO_YEARS = 2 * 365 * 24 * 60 * 60 * 1000;
+
+  const noIssuer = entries.filter(e => !fv(e, 'issuer'));
+
+  // Duplicate (issuer, account) pairs — same account added twice
+  const buckets = new Map();
+  for (const e of entries) {
+    const issuer = (fv(e, 'issuer') || '').toLowerCase().trim();
+    const account = (fv(e, 'account') || '').toLowerCase().trim();
+    if (!issuer && !account) continue;
+    const key = `${issuer}::${account}`;
+    if (!buckets.has(key)) buckets.set(key, []);
+    buckets.get(key).push(e);
+  }
+  const duplicates = [];
+  for (const arr of buckets.values()) if (arr.length > 1) duplicates.push(...arr);
+
+  // Suspiciously short base32 secret — < 16 chars ≈ < 80 bits of input
+  const weak = entries.filter(e => {
+    const secret = (fv(e, 'secret') || '').replace(/[^A-Z2-7]/gi, '');
+    return secret.length > 0 && secret.length < 16;
+  });
+
+  const aging = entries.filter(e => {
+    const ts = _auditEntryMaxTs(e);
+    return ts > 0 && (now - ts) > TWO_YEARS;
+  });
+
+  return [
+    { id: 'no-issuer', title: 'TOTPs with no issuer set',                items: noIssuer,   severity: noIssuer.length ? 'warn' : 'ok' },
+    { id: 'dup',       title: 'Duplicate issuer + account pairs',        items: duplicates, severity: duplicates.length ? 'warn' : 'ok' },
+    { id: 'weak',      title: 'Suspiciously short secrets (< 80 bits)',  items: weak,       severity: weak.length ? 'bad' : 'ok' },
+    { id: 'aging',     title: 'TOTPs untouched in over 2 years',         items: aging,      severity: 'ok' },
+  ];
+}
+
+async function handleVaultAudit() {
+  if (!S.key) return;
+  const results = runVaultAudit();
+  const totalIssues = results.reduce((sum, r) => sum + (r.severity !== 'ok' ? r.items.length : 0), 0);
+  const totalEntries = [...S.entries.values()].filter(e => !e.deleted).length;
+  $('audit-summary').textContent = totalEntries === 0
+    ? 'Vault is empty — nothing to audit.'
+    : `${totalEntries} ${totalEntries === 1 ? 'TOTP' : 'TOTPs'} scanned · ${totalIssues} ${totalIssues === 1 ? 'item flagged' : 'items flagged'} for attention.`;
+  $('audit-results').innerHTML = results.map(r => {
+    const sev = r.items.length === 0 ? 'ok' : (r.severity || 'ok');
+    const inner = r.items.length === 0
+      ? '<div class="audit-empty">All clear.</div>'
+      : r.items.map(e => {
+          const label = escHtml(fv(e, 'label') || '(no label)');
+          const sub = escHtml(fv(e, 'issuer') || fv(e, 'account') || '');
+          return `<div class="audit-entry" onclick="_auditOpenEntry('${escHtml(e.id)}')">
+            <span class="audit-entry-icon">🔐</span>
+            <div><div>${label}</div><div class="audit-entry-meta">${sub}</div></div>
+          </div>`;
+        }).join('');
+    return `<details class="audit-section is-${sev}">
+      <summary><span>${escHtml(r.title)}</span><span class="audit-count">${r.items.length}</span></summary>
+      <div class="audit-body">${inner}</div>
+    </details>`;
+  }).join('');
+  showModal('modal-vault-audit');
+}
+
+function _auditOpenEntry(id) {
+  hideModal('modal-vault-audit');
+  hideModal('modal-settings');
+  openEntryModal(id);
 }
 
 // ── Reminders: password-confirmation quiz + backup-reminder toast ──
