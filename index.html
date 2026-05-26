@@ -1452,7 +1452,8 @@ function showScreen(name) {
   const el = $('screen-' + name);
   if (el) el.classList.add('active');
   if (name === 'vault') { renderTopbar(); renderEntryList(); resetIdleTimer(); startCodesTicker(); }
-  if (name === 'unlock') setTimeout(() => $('unlock-pass')?.focus(), 60);
+  if (name === 'unlock') setTimeout(() => { $('unlock-pass')?.focus(); _resumeUnlockCountdownIfActive(); }, 60);
+  else _stopUnlockCountdown();
 }
 
 function showModal(id) { $(id)?.classList.add('active'); }
@@ -2027,23 +2028,87 @@ async function handleCreateVault() {
   finally { btn.disabled = false; btn.textContent = 'Create vault'; }
 }
 
+// ── Unlock brute-force protection ──
+// 3 free typos, then exponential backoff capped at 600s. State persists in
+// localStorage per-vault so closing the tab doesn't reset. Cleared on success.
+let _unlockCountdownTimer = null;
+
+function _lockoutKey() {
+  const name = S.dirHandle?.name || S._opfsVaultName || '_default';
+  return `rotor.unlock.lockout.${name}`;
+}
+function _getLockoutState() {
+  try { return JSON.parse(localStorage.getItem(_lockoutKey()) || '{"count":0,"lastFail":0}'); }
+  catch { return { count: 0, lastFail: 0 }; }
+}
+function _setLockoutState(s) { localStorage.setItem(_lockoutKey(), JSON.stringify(s)); }
+function _clearLockoutState() { localStorage.removeItem(_lockoutKey()); }
+function _backoffSeconds(count) {
+  if (count < 3) return 0;
+  return Math.min(600, 5 * Math.pow(2, count - 3));
+}
+function _startUnlockCountdown(readyAt) {
+  _stopUnlockCountdown();
+  const hint = $('unlock-hint'), btn = $('unlock-btn');
+  const tick = () => {
+    const remaining = Math.ceil((readyAt - Date.now()) / 1000);
+    if (remaining <= 0) {
+      _stopUnlockCountdown();
+      hint.textContent = ''; hint.style.color = '';
+      btn.disabled = false;
+      return;
+    }
+    const mm = Math.floor(remaining / 60), ss = remaining % 60;
+    hint.textContent = `Too many failed attempts. Try again in ${mm > 0 ? `${mm}m ${ss}s` : `${ss}s`}.`;
+    hint.style.color = 'var(--warn)';
+    btn.disabled = true;
+  };
+  tick();
+  _unlockCountdownTimer = setInterval(tick, 1000);
+}
+function _stopUnlockCountdown() {
+  if (_unlockCountdownTimer) { clearInterval(_unlockCountdownTimer); _unlockCountdownTimer = null; }
+}
+function _resumeUnlockCountdownIfActive() {
+  const lockState = _getLockoutState();
+  const readyAt = lockState.lastFail + _backoffSeconds(lockState.count) * 1000;
+  if (Date.now() < readyAt) _startUnlockCountdown(readyAt);
+}
+
 async function handleUnlock() {
   const pw = $('unlock-pass').value;
   const hint = $('unlock-hint');
   if (!pw) { hint.textContent = 'Enter your master password.'; return; }
-  hint.textContent = 'Decrypting…';
 
+  // Lockout gate
+  const lockState = _getLockoutState();
+  const readyAt = lockState.lastFail + _backoffSeconds(lockState.count) * 1000;
+  if (Date.now() < readyAt) { _startUnlockCountdown(readyAt); return; }
+  _stopUnlockCountdown();
+
+  hint.textContent = 'Decrypting…'; hint.style.color = '';
   const btn = $('unlock-btn');
   btn.disabled = true; btn.textContent = 'Unlocking…';
   try {
     await unlockVault(S.dirHandle, pw);
+    _clearLockoutState();
     $('unlock-pass').value = ''; hint.textContent = '';
     showScreen('vault');
+    btn.disabled = false; btn.textContent = 'Unlock';
   } catch (e) {
-    hint.textContent = e.message;
-    hint.style.color = 'var(--danger)';
-    $('unlock-pass').focus();
-  } finally { btn.disabled = false; btn.textContent = 'Unlock'; }
+    lockState.count++; lockState.lastFail = Date.now();
+    _setLockoutState(lockState);
+    btn.textContent = 'Unlock';
+    const newBackoff = _backoffSeconds(lockState.count);
+    if (newBackoff > 0) {
+      _startUnlockCountdown(Date.now() + newBackoff * 1000);
+    } else {
+      btn.disabled = false;
+      hint.textContent = e.message;
+      hint.style.color = 'var(--danger)';
+      $('unlock-pass').focus();
+    }
+  }
 }
 
 async function handleRegisterDevice() {
