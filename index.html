@@ -739,20 +739,11 @@ textarea { resize: vertical; min-height: 80px; }
         <button class="btn" onclick="saveSettings();toast('Settings saved.')">Save settings</button>
       </div>
 
-      <!-- Vault format upgrade (shown only for v1 vaults) -->
-      <div id="upgrade-vault-section" style="display:none;margin-top:18px;padding-top:14px;border-top:1px solid var(--border)">
-        <div class="security-section-title" style="font-weight:600;margin-bottom:6px">Vault format</div>
-        <p style="font-size:13px;color:var(--muted);margin:0 0 10px">
-          This vault uses the v1 format (PBKDF2). Upgrade to v2 (Argon2id + master_secret indirection) to enable changing your master password without re-encrypting every event, plus future hardware-key unlock.
-        </p>
-        <button class="btn secondary" style="width:100%" onclick="hideModal('modal-settings');openUpgradeVaultModal()">Upgrade vault format to v2…</button>
-      </div>
-
-      <!-- Change master password (shown only for v2 vaults) -->
-      <div id="change-master-pw-section" style="display:none;margin-top:18px;padding-top:14px;border-top:1px solid var(--border)">
+      <!-- Master password -->
+      <div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border)">
         <div class="security-section-title" style="font-weight:600;margin-bottom:6px">Master password</div>
         <p style="font-size:13px;color:var(--muted);margin:0 0 10px">
-          Cheap on v2 vaults: only the wrap-blob in meta changes — no events are re-encrypted.
+          Cheap: only the wrap-blob in meta changes — no events are re-encrypted.
         </p>
         <button class="btn secondary" style="width:100%" onclick="hideModal('modal-settings');openChangeMasterPwModal()">Change master password…</button>
       </div>
@@ -811,36 +802,6 @@ textarea { resize: vertical; min-height: 80px; }
       <div class="actions-bar" style="display:flex;gap:8px;justify-content:flex-end">
         <button type="button" class="btn ghost btn-sm" onclick="hideModal('modal-change-master-pw')">Cancel</button>
         <button type="submit" class="btn btn-sm" id="cmp-confirm-btn">Change password</button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<!-- ══════════════ MODAL: VAULT FORMAT UPGRADE (v1 → v2) ══════════════ -->
-<div id="modal-upgrade-vault" class="modal-bg">
-  <div class="modal" style="max-width:480px">
-    <h3>Upgrade vault format to v2</h3>
-    <p style="font-size:13px;color:var(--muted);margin:0 0 10px">
-      This re-encrypts <em>this device's</em> event log under the new v2 vault key (Argon2id-derived).
-      Other devices that haven't upgraded yet will continue to read their own logs unchanged
-      — they'll upgrade their own streams on their next write.
-    </p>
-    <div class="warn-box" style="margin-bottom:14px;padding:10px;border:1px solid var(--warn);border-radius:6px;font-size:13px">
-      <strong>One-way.</strong> Once upgraded, older Rotor builds can't read this vault.
-      Re-type your master password to confirm — your password does not change.
-    </div>
-    <form onsubmit="handleUpgradeVault();return false;">
-      <div class="field">
-        <label for="upgrade-vault-pw">Master password</label>
-        <div class="pw-wrap">
-          <input type="password" id="upgrade-vault-pw" placeholder="master password" autocomplete="current-password">
-          <button class="pw-toggle" type="button" onclick="togglePw('upgrade-vault-pw', this)">👁</button>
-        </div>
-      </div>
-      <div class="hint" id="upgrade-vault-hint" style="font-size:12px;min-height:16px;margin-bottom:10px"></div>
-      <div class="actions-bar" style="display:flex;gap:8px;justify-content:flex-end">
-        <button type="button" class="btn ghost btn-sm" onclick="closeUpgradeVaultModal()">Cancel</button>
-        <button type="submit" class="btn btn-sm" id="upgrade-vault-confirm-btn">Upgrade</button>
       </div>
     </form>
   </div>
@@ -1206,23 +1167,15 @@ function parseOtpauthUri(uri) {
 }
 
 // ══════════════════════════════════════════════════════════
-// CRYPTO
+// CRYPTO  (Argon2id + master_secret indirection)
 // ══════════════════════════════════════════════════════════
-
-const KDF_ITER = 600000;
-
-async function deriveKey(password, salt) {
-  const raw = await crypto.subtle.importKey(
-    'raw', new TextEncoder().encode(password),
-    { name: 'PBKDF2' }, false, ['deriveKey']
-  );
-  return crypto.subtle.deriveKey(
-    { name: 'PBKDF2', salt, iterations: KDF_ITER, hash: 'SHA-256' },
-    raw,
-    { name: 'AES-GCM', length: 256 },
-    false, ['encrypt', 'decrypt']
-  );
-}
+//
+// password → Argon2id(salt, m=64MB, t=3, p=4) → pw_key (32B).
+// pw_key → HKDF("rotor-v2", "pw-wrap-key") → pw_wrap_key.
+// pw_wrap_key unwraps meta.pw_wrap.wrapped_master → master_secret (32B random).
+// master_secret → HKDF("rotor-v2", "vault-key") → vault_key (AES-GCM, S.key).
+// Events are encrypted with vault_key. Changing the password only re-derives
+// pw_key and re-wraps master_secret; the events themselves stay put.
 
 async function encryptPayload(key, obj) {
   const nonce = crypto.getRandomValues(new Uint8Array(12));
@@ -1237,18 +1190,6 @@ async function decryptPayload(key, payload_ct, nonce_b64) {
   const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, ct);
   return JSON.parse(new TextDecoder().decode(plain));
 }
-
-// ══════════════════════════════════════════════════════════
-// V2 CRYPTO  (Argon2id + master_secret indirection)
-// ══════════════════════════════════════════════════════════
-//
-// v1 chain: password → PBKDF2(salt, 600k) → vault AES-GCM key (direct).
-// v2 chain: password → Argon2id(salt, m=64MB, t=3, p=4) → pw_key (32B).
-//           pw_key → HKDF("rotor-v2", "pw-wrap-key") → pw_wrap_key.
-//           pw_wrap_key unwraps meta.pw_wrap.wrapped_master → master_secret (32B random).
-//           master_secret → HKDF("rotor-v2", "vault-key") → vault_key (AES-GCM, S.key).
-// Events are encrypted with vault_key. Changing the password only re-derives
-// pw_key and re-wraps master_secret; the events themselves stay put.
 
 const ARGON2_PARAMS = { memory_kib: 65536, iterations: 3, parallelism: 4, hash_length: 32 };
 
@@ -1343,130 +1284,10 @@ function metaPwWrapEnabled(meta) {
   return !!(meta.pw_wrap && meta.pw_wrap.enabled);
 }
 
-// ══════════════════════════════════════════════════════════
-// V1 → V2 MIGRATION
-// ══════════════════════════════════════════════════════════
-//
-// Re-encrypts THIS device's own event log under a fresh v2 vault_key,
-// rebuilds the SHA-256 hash chain, atomically replaces the log, and writes
-// v2 meta. Other devices' streams stay v1-encrypted until those devices
-// upgrade their own (handled by upgradeOwnStreamIfNeeded on next write).
-//
-// Caller must have:
-//   - S.dirHandle set (writable)
-//   - S.key set to the v1 PBKDF2 key (the only thing that can read v1 events)
-//   - S.meta set to a v1 meta
-//   - S.deviceId set
-// Caller provides:
-//   - password: the master password (Argon2id input for the new pw_key)
-//
-// One-way. After this returns, S is in v2 state and meta carries
-// kdf_legacy so future devices unlocking with the same password can still
-// read un-upgraded streams from other devices.
-
-async function migrateV1toV2(password) {
-  if (!argon2.isReady()) {
-    await argon2.init();
-    if (!argon2.isReady()) throw new Error('Argon2id WASM not available — cannot upgrade vault');
-  }
-  if (S.vault_format_version === 2) throw new Error('Vault is already v2.');
-  const meta = S.meta;
-  if (!meta) throw new Error('No meta loaded.');
-  const legacySaltB64 = meta.kdf?.salt;
-  if (!legacySaltB64) throw new Error('v1 meta missing kdf.salt.');
-
-  // Keep the v1 PBKDF2 key alive — we need it to read existing events.
-  const vault_key_v1 = S.key;
-
-  // Generate v2 material.
-  const master_secret = crypto.getRandomValues(new Uint8Array(32));
-  const kdf_salt = crypto.getRandomValues(new Uint8Array(32));
-  const pw_key = await derivePwKeyArgon2(password, kdf_salt);
-  const vault_key = await makeVaultKey(master_secret);
-
-  // Re-encrypt this device's own log stream under vault_key, with a fresh
-  // hash chain over the new line strings.
-  const myStream = await readStream(S.dirHandle, S.deviceId);
-  const newLines = [];
-  let prevLineForHash = null;
-  for (let i = 0; i < myStream.length; i++) {
-    let oldEv;
-    try { oldEv = JSON.parse(myStream[i]); }
-    catch { throw new Error(`Malformed event at line ${i + 1} in own stream — aborting upgrade`); }
-    const payload = await decryptPayload(vault_key_v1, oldEv.payload_ct, oldEv.nonce);
-    const reEnc = await encryptPayload(vault_key, payload);
-    const newEv = {
-      seq: oldEv.seq,
-      prev_hash: prevLineForHash === null ? 'genesis' : await sha256b64(prevLineForHash),
-      ts: oldEv.ts,
-      device_id: oldEv.device_id,
-      event_type: oldEv.event_type,
-      event_format_version: 2,
-      payload_ct: reEnc.payload_ct,
-      nonce: reEnc.nonce
-    };
-    const newLine = JSON.stringify(newEv);
-    newLines.push(newLine);
-    prevLineForHash = newLine;
-  }
-
-  // Append the vault_format_upgraded marker event (v2-encrypted).
-  const upgEnc = await encryptPayload(vault_key, { from: 1, to: 2 });
-  const upgEv = {
-    seq: newLines.length + 1,
-    prev_hash: prevLineForHash === null ? 'genesis' : await sha256b64(prevLineForHash),
-    ts: nowISO(),
-    device_id: S.deviceId,
-    event_type: 'vault_format_upgraded',
-    event_format_version: 2,
-    payload_ct: upgEnc.payload_ct,
-    nonce: upgEnc.nonce
-  };
-  newLines.push(JSON.stringify(upgEv));
-
-  await atomicReplaceStream(S.dirHandle, S.deviceId, newLines.join('\n') + '\n');
-
-  // Build v2 meta. Preserve the legacy PBKDF2 salt so other devices that
-  // haven't upgraded yet can still derive their old key and read their own
-  // (still-v1) streams during merge.
-  const pwWrapKey = await makePwOnlyWrapKey(pw_key);
-  const wrap = await aesGcmWrap(pwWrapKey, master_secret);
-  const newMeta = {
-    format: 'rotor-v2',
-    vault_format_version: 2,
-    kdf: {
-      algorithm: 'argon2id',
-      memory_kib: ARGON2_PARAMS.memory_kib,
-      iterations: ARGON2_PARAMS.iterations,
-      parallelism: ARGON2_PARAMS.parallelism,
-      salt_kdf: b64e(kdf_salt)
-    },
-    kdf_legacy: {
-      algorithm: 'pbkdf2-sha256',
-      iterations: KDF_ITER,
-      salt: legacySaltB64
-    },
-    devices: meta.devices ? meta.devices.map(d => ({ ...d })) : [],
-    bound_keys: [],
-    pw_wrap: { enabled: true, wrapped_master: wrap.ct_b64, wrap_nonce: wrap.nonce_b64 }
-  };
-  await writeMeta(S.dirHandle, newMeta);
-
-  // Promote in-memory state to v2.
-  S.meta = newMeta;
-  S.vault_format_version = 2;
-  S.legacy_key = vault_key_v1;
-  S.key = vault_key;
-  S.master_secret = master_secret;
-  S.pw_key = pw_key;
-  S.salt = null;
-}
-
 // Change the master password on a v2 vault. Cheap operation in v2: only the
 // pw_wrap blob in meta changes — master_secret stays put, vault_key stays put,
 // every event in every device's log stays put.
 async function changeMasterPassword(currentPw, newPw) {
-  if (S.vault_format_version !== 2) throw new Error('Change master password requires a v2 vault.');
   if (!argon2.isReady()) {
     await argon2.init();
     if (!argon2.isReady()) throw new Error('Argon2id WASM is not loaded.');
@@ -1502,76 +1323,14 @@ async function changeMasterPassword(currentPw, newPw) {
   await appendEvent('password_changed', { ts: nowISO() });
 }
 
-// Joining a v2 vault from a still-v1 device: before this device writes any
-// new event, upgrade its own log stream so newly-written events use vault_key
-// and old ones get re-encrypted to match. Returns true if upgrade happened.
-async function upgradeOwnStreamIfNeeded() {
-  if (S.vault_format_version !== 2) return false;
-  if (!S.master_secret) return false;          // must be unlocked v2
-  if (!S.legacy_key) return false;             // can't read old events without legacy key
-  const myStream = await readStream(S.dirHandle, S.deviceId);
-  if (myStream.length === 0) return false;
-  let needsUpgrade = false;
-  try {
-    const first = JSON.parse(myStream[0]);
-    if ((first.event_format_version ?? 1) < 2) needsUpgrade = true;
-  } catch { return false; }
-  if (!needsUpgrade) return false;
-
-  const newLines = [];
-  let prevLineForHash = null;
-  for (let i = 0; i < myStream.length; i++) {
-    const oldEv = JSON.parse(myStream[i]);
-    let payload;
-    try { payload = await decryptPayload(_keyForEvent(oldEv), oldEv.payload_ct, oldEv.nonce); }
-    catch { throw new Error('Could not decrypt own v1 events during stream upgrade'); }
-    if ((oldEv.event_format_version ?? 1) >= 2) {
-      newLines.push(myStream[i]);
-      prevLineForHash = myStream[i];
-      continue;
-    }
-    const reEnc = await encryptPayload(S.key, payload);
-    const newEv = {
-      seq: oldEv.seq,
-      prev_hash: prevLineForHash === null ? 'genesis' : await sha256b64(prevLineForHash),
-      ts: oldEv.ts,
-      device_id: oldEv.device_id,
-      event_type: oldEv.event_type,
-      event_format_version: 2,
-      payload_ct: reEnc.payload_ct,
-      nonce: reEnc.nonce
-    };
-    const newLine = JSON.stringify(newEv);
-    newLines.push(newLine);
-    prevLineForHash = newLine;
-  }
-  const upgEnc = await encryptPayload(S.key, { from: 1, to: 2 });
-  const upgEv = {
-    seq: newLines.length + 1,
-    prev_hash: prevLineForHash === null ? 'genesis' : await sha256b64(prevLineForHash),
-    ts: nowISO(),
-    device_id: S.deviceId,
-    event_type: 'vault_format_upgraded',
-    event_format_version: 2,
-    payload_ct: upgEnc.payload_ct,
-    nonce: upgEnc.nonce
-  };
-  newLines.push(JSON.stringify(upgEv));
-  await atomicReplaceStream(S.dirHandle, S.deviceId, newLines.join('\n') + '\n');
-  return true;
-}
-
 // ══════════════════════════════════════════════════════════
 // STATE
 // ══════════════════════════════════════════════════════════
 
 const S = {
-  key: null,                 // CryptoKey — v1: PBKDF2 result; v2: vault_key from master_secret
-  salt: null,                // Uint8Array — v1 PBKDF2 salt, or v2 kdf_legacy salt for reading legacy events
-  legacy_key: null,          // CryptoKey — set on v2 vaults to decrypt v1 events from un-upgraded streams
-  master_secret: null,       // Uint8Array(32) — v2 master secret, held while unlocked
-  pw_key: null,              // Uint8Array(32) — Argon2id output, held transiently for change-master-password
-  vault_format_version: 1,   // 1 or 2 — detected from meta on unlock
+  key: null,                 // CryptoKey — vault_key (AES-GCM) derived from master_secret
+  master_secret: null,       // Uint8Array(32) — random; held while unlocked
+  pw_key: null,              // Uint8Array(32) — Argon2id output; held transiently for change-master-password
   dirHandle: null,
   meta: null,
   deviceId: null,
@@ -1682,34 +1441,11 @@ async function appendLineToStream(dir, deviceId, line) {
   await writeFileText(dir, `rotor-events-${deviceId}.jsonl`, existing + line + '\n');
 }
 
-// Two-step replace: write a .tmp sibling, then overwrite the real file. The
-// .tmp survives a crash mid-rewrite and is cleaned up on next unlock.
-async function atomicReplaceStream(dir, deviceId, content) {
-  const realName = `rotor-events-${deviceId}.jsonl`;
-  const tmpName = `${realName}.tmp`;
-  await writeFileText(dir, tmpName, content);
-  await writeFileText(dir, realName, content);
-  try { await dir.removeEntry(tmpName); } catch {}
-}
-
-async function cleanupStaleStreamTmps(dir) {
-  try {
-    for await (const [name] of dir.entries()) {
-      if (name.startsWith('rotor-events-') && name.endsWith('.jsonl.tmp')) {
-        try { await dir.removeEntry(name); } catch {}
-      }
-    }
-  } catch {}
-}
-
 // ══════════════════════════════════════════════════════════
 // EVENT LOG
 // ══════════════════════════════════════════════════════════
 
 async function appendEvent(type, payloadObj) {
-  // If we joined a v2 vault from a v1 device, upgrade our own log first.
-  // No-op when not needed.
-  await upgradeOwnStreamIfNeeded();
   const { payload_ct, nonce } = await encryptPayload(S.key, payloadObj);
   const lines = await readStream(S.dirHandle, S.deviceId);
   const prevHash = lines.length > 0 ? await sha256b64(lines[lines.length - 1]) : 'genesis';
@@ -1719,25 +1455,13 @@ async function appendEvent(type, payloadObj) {
     ts: nowISO(),
     device_id: S.deviceId,
     event_type: type,
+    event_format_version: 2,
     payload_ct,
     nonce
   };
-  // v2 vaults tag their events so a future device with both v1 + v2 streams
-  // knows which key to use. v1 events have no event_format_version; treated as 1.
-  if (S.vault_format_version === 2) event.event_format_version = 2;
   const line = JSON.stringify(event);
   await appendLineToStream(S.dirHandle, S.deviceId, line);
   return line;
-}
-
-// Returns the right key to decrypt a given event.
-// - v2 events (event_format_version === 2): S.key is vault_key.
-// - v1 events: legacy_key if set (v2 vault reading un-upgraded v1 streams),
-//   otherwise S.key (pure v1 vault — S.key IS the PBKDF2 key).
-function _keyForEvent(ev) {
-  const v = ev.event_format_version ?? 1;
-  if (v >= 2) return S.key;
-  return S.legacy_key ?? S.key;
 }
 
 // ══════════════════════════════════════════════════════════
@@ -1773,7 +1497,7 @@ async function loadAndMerge() {
   for (const ev of allEvents) {
     if (ev.event_type !== 'device_revoked') continue;
     try {
-      const p = await decryptPayload(_keyForEvent(ev), ev.payload_ct, ev.nonce);
+      const p = await decryptPayload(S.key, ev.payload_ct, ev.nonce);
       if (!revocations[p.device_id] || p.revoked_at > revocations[p.device_id]) {
         revocations[p.device_id] = p.revoked_at;
       }
@@ -1787,7 +1511,7 @@ async function loadAndMerge() {
     if (revAt && ev.ts > revAt) continue;
 
     let p;
-    try { p = await decryptPayload(_keyForEvent(ev), ev.payload_ct, ev.nonce); } catch { continue; }
+    try { p = await decryptPayload(S.key, ev.payload_ct, ev.nonce); } catch { continue; }
 
     if (ev.event_type === 'entry_created') {
       if (!entries.has(p.id)) {
@@ -1879,9 +1603,8 @@ async function createVault(dirHandle, password, deviceLabel) {
     pw_wrap: { enabled: true, wrapped_master: wrap.ct_b64, wrap_nonce: wrap.nonce_b64 }
   };
   await writeMeta(dirHandle, meta);
-  S.key = vault_key; S.salt = null; S.dirHandle = dirHandle; S.meta = meta;
-  S.master_secret = master_secret; S.pw_key = pw_key; S.legacy_key = null;
-  S.vault_format_version = 2;
+  S.key = vault_key; S.dirHandle = dirHandle; S.meta = meta;
+  S.master_secret = master_secret; S.pw_key = pw_key;
   S.deviceLabel = deviceLabel;
   localStorage.setItem('rotor.deviceLabel', deviceLabel);
   if (!S._isOpfs) await idbSet('dirHandle', dirHandle);
@@ -1892,67 +1615,28 @@ async function createVault(dirHandle, password, deviceLabel) {
 async function unlockVault(dirHandle, password) {
   const meta = await readMeta(dirHandle);
   if (!meta) throw new Error('No vault found in this folder.');
-
-  if (metaVersion(meta) === 2) {
-    if (!metaPwWrapEnabled(meta)) {
-      throw new Error('Password-only unlock is disabled for this vault.');
-    }
-    await argon2.init();
-    if (!argon2.isReady()) throw new Error('Argon2id WASM is not loaded in this build, so v2 vaults can\'t be unlocked here.');
-    const kdf_salt = b64d(meta.kdf.salt_kdf);
-    const pw_key = await derivePwKeyArgon2(password, kdf_salt);
-    const pwWrapKey = await makePwOnlyWrapKey(pw_key);
-    let master_secret;
-    try {
-      master_secret = await aesGcmUnwrap(pwWrapKey, meta.pw_wrap.wrapped_master, meta.pw_wrap.wrap_nonce);
-    } catch { throw new Error('Wrong master password.'); }
-    const vault_key = await makeVaultKey(master_secret);
-
-    // If meta carries kdf_legacy, derive the v1 PBKDF2 key too so we can read
-    // any un-upgraded device streams alongside this device's v2 stream.
-    let legacy_key = null;
-    if (meta.kdf_legacy && meta.kdf_legacy.salt) {
-      const legacySalt = b64d(meta.kdf_legacy.salt);
-      try { legacy_key = await deriveKey(password, legacySalt); } catch {}
-    }
-
-    S.key = vault_key;
-    S.legacy_key = legacy_key;
-    S.master_secret = master_secret;
-    S.pw_key = pw_key;
-    S.vault_format_version = 2;
-    S.salt = null;
-    S.dirHandle = dirHandle;
-    S.meta = meta;
-    if (!S.deviceId) { S.deviceId = localStorage.getItem('rotor.deviceId') || uuid(); }
-    if (!S.deviceLabel) { S.deviceLabel = localStorage.getItem('rotor.deviceLabel') || 'Unknown device'; }
-    if (!S._isOpfs) await idbSet('dirHandle', dirHandle);
-    await cleanupStaleStreamTmps(dirHandle);
-    await loadAndMerge();
-    const saved = localStorage.getItem('rotor.settings');
-    if (saved) { try { Object.assign(S.settings, JSON.parse(saved)); } catch {} }
-    return;
+  if (metaVersion(meta) !== 2) {
+    throw new Error('This vault uses an older format that is no longer supported. Open it in an older Rotor build to migrate it first.');
   }
-
-  // v1 path — unchanged from prior behavior.
-  const salt = b64d(meta.kdf.salt);
-  const key = await deriveKey(password, salt);
-
-  // Verify key against first available event
-  const streamNames = await getAllStreamNames(dirHandle);
-  if (streamNames.length === 0) throw new Error('No event streams found in vault.');
-  for (const name of streamNames) {
-    const deviceId = name.replace('rotor-events-', '').replace('.jsonl', '');
-    const lines = await readStream(dirHandle, deviceId);
-    if (!lines.length) continue;
-    const ev = JSON.parse(lines[0]);
-    try { await decryptPayload(key, ev.payload_ct, ev.nonce); break; }
-    catch { throw new Error('Wrong master password.'); }
+  if (!metaPwWrapEnabled(meta)) {
+    throw new Error('Password-only unlock is disabled for this vault.');
   }
+  await argon2.init();
+  if (!argon2.isReady()) throw new Error('Argon2id WASM is not loaded — cannot unlock.');
+  const kdf_salt = b64d(meta.kdf.salt_kdf);
+  const pw_key = await derivePwKeyArgon2(password, kdf_salt);
+  const pwWrapKey = await makePwOnlyWrapKey(pw_key);
+  let master_secret;
+  try {
+    master_secret = await aesGcmUnwrap(pwWrapKey, meta.pw_wrap.wrapped_master, meta.pw_wrap.wrap_nonce);
+  } catch { throw new Error('Wrong master password.'); }
+  const vault_key = await makeVaultKey(master_secret);
 
-  S.key = key; S.salt = salt; S.dirHandle = dirHandle; S.meta = meta;
-  S.vault_format_version = 1;
-  S.legacy_key = null; S.master_secret = null; S.pw_key = null;
+  S.key = vault_key;
+  S.master_secret = master_secret;
+  S.pw_key = pw_key;
+  S.dirHandle = dirHandle;
+  S.meta = meta;
   if (!S.deviceId) { S.deviceId = localStorage.getItem('rotor.deviceId') || uuid(); }
   if (!S.deviceLabel) { S.deviceLabel = localStorage.getItem('rotor.deviceLabel') || 'Unknown device'; }
   if (!S._isOpfs) await idbSet('dirHandle', dirHandle);
@@ -1964,67 +1648,29 @@ async function unlockVault(dirHandle, password) {
 async function registerDevice(dirHandle, password, deviceId, deviceLabel) {
   const meta = await readMeta(dirHandle);
   if (!meta) throw new Error('Not a Rotor vault.');
-
-  if (metaVersion(meta) === 2) {
-    if (!metaPwWrapEnabled(meta)) throw new Error('Password-only unlock is disabled for this vault.');
-    await argon2.init();
-    if (!argon2.isReady()) throw new Error('Argon2id WASM is not loaded in this build, so v2 vaults can\'t be unlocked here.');
-    const kdf_salt = b64d(meta.kdf.salt_kdf);
-    const pw_key = await derivePwKeyArgon2(password, kdf_salt);
-    const pwWrapKey = await makePwOnlyWrapKey(pw_key);
-    let master_secret;
-    try {
-      master_secret = await aesGcmUnwrap(pwWrapKey, meta.pw_wrap.wrapped_master, meta.pw_wrap.wrap_nonce);
-    } catch { throw new Error('Wrong master password.'); }
-    const vault_key = await makeVaultKey(master_secret);
-    let legacy_key = null;
-    if (meta.kdf_legacy && meta.kdf_legacy.salt) {
-      const legacySalt = b64d(meta.kdf_legacy.salt);
-      try { legacy_key = await deriveKey(password, legacySalt); } catch {}
-    }
-    S.key = vault_key;
-    S.legacy_key = legacy_key;
-    S.master_secret = master_secret;
-    S.pw_key = pw_key;
-    S.vault_format_version = 2;
-    S.salt = null;
-    S.dirHandle = dirHandle; S.meta = meta;
-    S.deviceId = deviceId; S.deviceLabel = deviceLabel;
-    localStorage.setItem('rotor.deviceId', deviceId);
-    localStorage.setItem('rotor.deviceLabel', deviceLabel);
-    meta.devices = meta.devices || [];
-    meta.devices.push({ id: deviceId, label: deviceLabel, registered_at: nowISO() });
-    await writeMeta(dirHandle, meta);
-    if (!S._isOpfs) await idbSet('dirHandle', dirHandle);
-    await appendEvent('device_registered', { device_id: deviceId, label: deviceLabel });
-    await loadAndMerge();
-    const savedV2 = localStorage.getItem('rotor.settings');
-    if (savedV2) { try { Object.assign(S.settings, JSON.parse(savedV2)); } catch {} }
-    return;
+  if (metaVersion(meta) !== 2) {
+    throw new Error('This vault uses an older format that is no longer supported.');
   }
+  if (!metaPwWrapEnabled(meta)) throw new Error('Password-only unlock is disabled for this vault.');
+  await argon2.init();
+  if (!argon2.isReady()) throw new Error('Argon2id WASM is not loaded — cannot unlock.');
+  const kdf_salt = b64d(meta.kdf.salt_kdf);
+  const pw_key = await derivePwKeyArgon2(password, kdf_salt);
+  const pwWrapKey = await makePwOnlyWrapKey(pw_key);
+  let master_secret;
+  try {
+    master_secret = await aesGcmUnwrap(pwWrapKey, meta.pw_wrap.wrapped_master, meta.pw_wrap.wrap_nonce);
+  } catch { throw new Error('Wrong master password.'); }
+  const vault_key = await makeVaultKey(master_secret);
 
-  // v1 path
-  const salt = b64d(meta.kdf.salt);
-  const key = await deriveKey(password, salt);
-
-  // Verify key
-  const streamNames = await getAllStreamNames(dirHandle);
-  for (const name of streamNames) {
-    const did = name.replace('rotor-events-', '').replace('.jsonl', '');
-    const lines = await readStream(dirHandle, did);
-    if (!lines.length) continue;
-    const ev = JSON.parse(lines[0]);
-    try { await decryptPayload(key, ev.payload_ct, ev.nonce); break; }
-    catch { throw new Error('Wrong master password.'); }
-  }
-
-  S.key = key; S.salt = salt; S.dirHandle = dirHandle; S.meta = meta;
-  S.vault_format_version = 1;
-  S.legacy_key = null; S.master_secret = null; S.pw_key = null;
+  S.key = vault_key;
+  S.master_secret = master_secret;
+  S.pw_key = pw_key;
+  S.dirHandle = dirHandle; S.meta = meta;
   S.deviceId = deviceId; S.deviceLabel = deviceLabel;
   localStorage.setItem('rotor.deviceId', deviceId);
   localStorage.setItem('rotor.deviceLabel', deviceLabel);
-
+  meta.devices = meta.devices || [];
   meta.devices.push({ id: deviceId, label: deviceLabel, registered_at: nowISO() });
   await writeMeta(dirHandle, meta);
   if (!S._isOpfs) await idbSet('dirHandle', dirHandle);
@@ -2040,14 +1686,12 @@ async function registerDevice(dirHandle, password, deviceId, deviceLabel) {
 
 function lock() {
   stopCodesTicker();
-  S.key = null; S.salt = null; S.entries = new Map();
-  // Zero v2 in-memory secrets — best-effort wipe before dropping references.
-  S.legacy_key = null;
+  S.key = null; S.entries = new Map();
+  // Zero in-memory secrets — best-effort wipe before dropping references.
   if (S.master_secret) { S.master_secret.fill(0); }
   S.master_secret = null;
   if (S.pw_key) { S.pw_key.fill(0); }
   S.pw_key = null;
-  S.vault_format_version = 1;
   Object.values(S.clipTimers).forEach(t => clearTimeout(t));
   S.clipTimers = {};
   clearTimeout(S.idleTimer);
@@ -2347,10 +1991,6 @@ function openSettings() {
   $('set-lock-hide-grace').value = S.settings.lockOnHideGrace ?? 30;
   $('set-pw-quiz').value = S.settings.pwQuizDays ?? 30;
   $('set-backup-reminder').value = S.settings.backupReminderDays ?? 60;
-  const upgSection = $('upgrade-vault-section');
-  if (upgSection) upgSection.style.display = S.vault_format_version === 2 ? 'none' : '';
-  const cmpSection = $('change-master-pw-section');
-  if (cmpSection) cmpSection.style.display = S.vault_format_version === 2 ? '' : 'none';
   showSettingsTab('vault');
   renderDeviceRoster();
   showModal('modal-settings');
@@ -2906,14 +2546,20 @@ function _backupReminderKey() { return `rotor.backupReminder.lastShown.${_vaultK
 // decrypt with the candidate-derived key — succeeds iff the keys are
 // the same underlying material.
 async function verifyMasterPassword(password) {
-  if (!S.key || !S.salt) return false;
+  if (!S.key || !S.master_secret || !S.meta?.pw_wrap?.wrapped_master) return false;
   try {
-    const candidateKey = await deriveKey(password, S.salt);
-    const iv = crypto.getRandomValues(new Uint8Array(12));
-    const probe = new TextEncoder().encode('vault-probe');
-    const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, S.key, probe);
-    const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, candidateKey, ct);
-    return new TextDecoder().decode(pt) === 'vault-probe';
+    if (!argon2.isReady()) {
+      await argon2.init();
+      if (!argon2.isReady()) return false;
+    }
+    const kdf_salt = b64d(S.meta.kdf.salt_kdf);
+    const candidate_pw_key = await derivePwKeyArgon2(password, kdf_salt);
+    const candidateWrapKey = await makePwOnlyWrapKey(candidate_pw_key);
+    const ms = await aesGcmUnwrap(candidateWrapKey, S.meta.pw_wrap.wrapped_master, S.meta.pw_wrap.wrap_nonce);
+    // Defensive: confirm the unwrapped bytes match the live master_secret.
+    if (ms.length !== S.master_secret.length) return false;
+    for (let i = 0; i < ms.length; i++) if (ms[i] !== S.master_secret[i]) return false;
+    return true;
   } catch { return false; }
 }
 
@@ -3005,7 +2651,6 @@ function _showBackupReminderToast() {
 // ── Change master password (v2 only) handler ──
 
 function openChangeMasterPwModal() {
-  if (S.vault_format_version !== 2) { toast('This vault must be upgraded to v2 first.'); return; }
   $('cmp-current').value = '';
   $('cmp-new').value = '';
   $('cmp-new2').value = '';
@@ -3045,62 +2690,6 @@ async function handleChangeMasterPw() {
     hint.style.color = 'var(--danger)';
   } finally {
     btn.disabled = false; btn.textContent = 'Change password';
-  }
-}
-
-// ── Vault format upgrade (v1 → v2) handler ──
-
-function openUpgradeVaultModal() {
-  if (S.vault_format_version === 2) { toast('Vault is already v2.'); return; }
-  $('upgrade-vault-pw').value = '';
-  $('upgrade-vault-hint').textContent = '';
-  $('upgrade-vault-hint').style.color = '';
-  $('upgrade-vault-confirm-btn').disabled = false;
-  $('upgrade-vault-confirm-btn').textContent = 'Upgrade';
-  showModal('modal-upgrade-vault');
-  setTimeout(() => $('upgrade-vault-pw')?.focus(), 60);
-}
-
-function closeUpgradeVaultModal() {
-  $('upgrade-vault-pw').value = '';
-  $('upgrade-vault-hint').textContent = '';
-  hideModal('modal-upgrade-vault');
-}
-
-async function handleUpgradeVault() {
-  if (S.vault_format_version === 2) { closeUpgradeVaultModal(); return; }
-  const pw = $('upgrade-vault-pw').value;
-  const hint = $('upgrade-vault-hint');
-  if (!pw) { hint.textContent = 'Type your master password.'; hint.style.color = 'var(--muted)'; return; }
-
-  // Verify the typed password matches the currently-unlocked v1 key. Avoids
-  // the footgun where typing a different password would "upgrade and change
-  // password" silently. verifyMasterPassword works against the v1 PBKDF2 key
-  // when S.salt is set (which it is for v1 unlocked state).
-  hint.textContent = 'Verifying…'; hint.style.color = '';
-  const ok = await verifyMasterPassword(pw);
-  if (!ok) {
-    hint.textContent = "That didn't match your current master password.";
-    hint.style.color = 'var(--danger)';
-    $('upgrade-vault-pw').focus(); $('upgrade-vault-pw').select();
-    return;
-  }
-
-  const btn = $('upgrade-vault-confirm-btn');
-  btn.disabled = true; btn.textContent = 'Upgrading…';
-  hint.textContent = 'Re-encrypting this device\'s log (Argon2id KDF, may take a few seconds)…';
-  hint.style.color = '';
-  try {
-    await migrateV1toV2(pw);
-    $('upgrade-vault-pw').value = '';
-    hint.textContent = '';
-    hideModal('modal-upgrade-vault');
-    toast('Vault upgraded to v2.');
-  } catch (e) {
-    hint.textContent = 'Upgrade failed: ' + e.message;
-    hint.style.color = 'var(--danger)';
-  } finally {
-    btn.disabled = false; btn.textContent = 'Upgrade';
   }
 }
 
