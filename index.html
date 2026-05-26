@@ -679,6 +679,16 @@ textarea { resize: vertical; min-height: 80px; }
         <input type="number" id="set-lock-hide-grace" min="0" max="300" value="30">
         <div class="hint">Wait this long after tab is hidden before locking. 0 = lock immediately. Cancelled if you return to the tab in time.</div>
       </div>
+      <div class="field">
+        <label for="set-pw-quiz">Password check (days, 0 = off)</label>
+        <input type="number" id="set-pw-quiz" min="0" max="365" value="30">
+        <div class="hint">Periodically prompt you to retype your master password so a slow forgetting doesn't become terminal.</div>
+      </div>
+      <div class="field">
+        <label for="set-backup-reminder">Backup reminder (days, 0 = off)</label>
+        <input type="number" id="set-backup-reminder" min="0" max="365" value="60">
+        <div class="hint">Toast nudge when you haven't exported an encrypted archive in this long.</div>
+      </div>
       <div style="margin-top:16px">
         <button class="btn" onclick="saveSettings();toast('Settings saved.')">Save settings</button>
       </div>
@@ -698,6 +708,32 @@ textarea { resize: vertical; min-height: 80px; }
     <div style="text-align:right">
       <button class="btn ghost btn-sm" onclick="hideModal('modal-settings')">Close</button>
     </div>
+  </div>
+</div>
+
+<!-- ══════════════ MODAL: PASSWORD CHECK ══════════════ -->
+<div id="modal-pw-quiz" class="modal-bg">
+  <div class="modal">
+    <h3>Password check</h3>
+    <p style="font-size:13px;color:var(--muted);margin:0 0 14px">
+      Quick confirmation that you still remember your master password.
+      If you forget it, your vault becomes unrecoverable — this catches it before it's terminal.
+    </p>
+    <form onsubmit="handlePwQuizConfirm();return false;">
+      <div class="field">
+        <label for="pw-quiz-input">Master password</label>
+        <div class="pw-wrap">
+          <input type="password" id="pw-quiz-input" placeholder="master password" autocomplete="current-password">
+          <button class="pw-toggle" type="button" onclick="togglePw('pw-quiz-input', this)">👁</button>
+        </div>
+      </div>
+      <div class="hint" id="pw-quiz-hint" style="font-size:12px;min-height:16px;margin-bottom:10px"></div>
+      <div class="actions-bar" style="display:flex;gap:8px;justify-content:flex-end">
+        <button type="button" class="btn ghost btn-sm" onclick="dismissPwQuiz('later')">Remind tomorrow</button>
+        <button type="button" class="btn ghost btn-sm" onclick="dismissPwQuiz('skip')">Skip this time</button>
+        <button type="submit" class="btn btn-sm">Confirm</button>
+      </div>
+    </form>
   </div>
 </div>
 
@@ -1045,7 +1081,7 @@ const S = {
   _pendingHandle: null,
   _isOpfs: false,
   _opfsVaultName: null,
-  settings: { idleTimeout: 300, clipClear: 30, lockOnHide: true, lockOnHideGrace: 30 }
+  settings: { idleTimeout: 300, clipClear: 30, lockOnHide: true, lockOnHideGrace: 30, pwQuizDays: 30, backupReminderDays: 60 }
 };
 
 // ══════════════════════════════════════════════════════════
@@ -1462,7 +1498,7 @@ function showScreen(name) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   const el = $('screen-' + name);
   if (el) el.classList.add('active');
-  if (name === 'vault') { renderTopbar(); renderEntryList(); resetIdleTimer(); startCodesTicker(); }
+  if (name === 'vault') { renderTopbar(); renderEntryList(); resetIdleTimer(); startCodesTicker(); _checkRemindersAfterUnlock(); }
   if (name === 'unlock') setTimeout(() => { $('unlock-pass')?.focus(); _resumeUnlockCountdownIfActive(); }, 60);
   else _stopUnlockCountdown();
 }
@@ -1639,6 +1675,8 @@ function openSettings() {
   $('set-clip').value = S.settings.clipClear;
   $('set-lock-hide').checked = S.settings.lockOnHide;
   $('set-lock-hide-grace').value = S.settings.lockOnHideGrace ?? 30;
+  $('set-pw-quiz').value = S.settings.pwQuizDays ?? 30;
+  $('set-backup-reminder').value = S.settings.backupReminderDays ?? 60;
   showSettingsTab('vault');
   renderDeviceRoster();
   showModal('modal-settings');
@@ -1654,6 +1692,8 @@ function saveSettings() {
   S.settings.clipClear = Math.max(5, parseInt($('set-clip').value) || 30);
   S.settings.lockOnHide = $('set-lock-hide').checked;
   S.settings.lockOnHideGrace = Math.min(300, Math.max(0, parseInt($('set-lock-hide-grace').value) || 0));
+  S.settings.pwQuizDays = Math.min(365, Math.max(0, parseInt($('set-pw-quiz').value) || 0));
+  S.settings.backupReminderDays = Math.min(365, Math.max(0, parseInt($('set-backup-reminder').value) || 0));
   localStorage.setItem('rotor.settings', JSON.stringify(S.settings));
   resetIdleTimer();
 }
@@ -1768,6 +1808,7 @@ async function exportEncryptedArchive() {
     format: 'rotor-archive-v1', created_at: nowISO(), meta: S.meta, streams
   }, null, 2)], { type: 'application/json' });
   downloadBlob(blob, `rotor-backup-${new Date().toISOString().slice(0, 10)}.rotor`);
+  try { localStorage.setItem(_exportTsKey(), String(Date.now())); } catch {}
   toast('Archive downloaded.');
 }
 
@@ -2086,6 +2127,125 @@ function _resumeUnlockCountdownIfActive() {
   const lockState = _getLockoutState();
   const readyAt = lockState.lastFail + _backoffSeconds(lockState.count) * 1000;
   if (Date.now() < readyAt) _startUnlockCountdown(readyAt);
+}
+
+// ── Reminders: password-confirmation quiz + backup-reminder toast ──
+// Both reduce the "I lost it forever" disaster surface without changing
+// the threat model. Per-vault state in localStorage.
+
+function _vaultKey() { return S.dirHandle?.name || S._opfsVaultName || '_default'; }
+function _pwQuizKey() { return `rotor.pwQuiz.lastOk.${_vaultKey()}`; }
+function _exportTsKey() { return `rotor.export.lastTs.${_vaultKey()}`; }
+function _backupReminderKey() { return `rotor.backupReminder.lastShown.${_vaultKey()}`; }
+
+// Verify a candidate password matches the unlocked vault's key without
+// touching state. Encrypt a known probe with the live key, then try to
+// decrypt with the candidate-derived key — succeeds iff the keys are
+// the same underlying material.
+async function verifyMasterPassword(password) {
+  if (!S.key || !S.salt) return false;
+  try {
+    const candidateKey = await deriveKey(password, S.salt);
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const probe = new TextEncoder().encode('vault-probe');
+    const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, S.key, probe);
+    const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, candidateKey, ct);
+    return new TextDecoder().decode(pt) === 'vault-probe';
+  } catch { return false; }
+}
+
+function _shouldShowPwQuiz() {
+  const days = S.settings.pwQuizDays;
+  if (!days) return false;
+  const lastOk = parseInt(localStorage.getItem(_pwQuizKey()) || '0');
+  const interval = days * 86400 * 1000;
+  // If never confirmed, give a one-week grace from when vault was first unlocked
+  // (avoid prompting a brand-new user immediately). Use lastOk=0 as "never".
+  if (!lastOk) {
+    const firstSeen = parseInt(localStorage.getItem(_pwQuizKey() + '.firstSeen') || '0');
+    if (!firstSeen) { localStorage.setItem(_pwQuizKey() + '.firstSeen', String(Date.now())); return false; }
+    return (Date.now() - firstSeen) > 7 * 86400 * 1000;
+  }
+  return (Date.now() - lastOk) > interval;
+}
+
+function _openPwQuizModal() {
+  $('pw-quiz-input').value = '';
+  $('pw-quiz-hint').textContent = '';
+  $('pw-quiz-hint').style.color = '';
+  showModal('modal-pw-quiz');
+  setTimeout(() => $('pw-quiz-input')?.focus(), 60);
+}
+
+async function handlePwQuizConfirm() {
+  const pw = $('pw-quiz-input').value;
+  const hint = $('pw-quiz-hint');
+  if (!pw) { hint.textContent = 'Type your master password.'; hint.style.color = 'var(--muted)'; return; }
+  hint.textContent = 'Checking…'; hint.style.color = '';
+  const ok = await verifyMasterPassword(pw);
+  if (ok) {
+    localStorage.setItem(_pwQuizKey(), String(Date.now()));
+    $('pw-quiz-input').value = '';
+    hint.textContent = '';
+    hideModal('modal-pw-quiz');
+    toast('Good — you still remember it.');
+  } else {
+    hint.textContent = "That didn't match. Try again, or skip — your vault stays unlocked either way.";
+    hint.style.color = 'var(--danger)';
+    $('pw-quiz-input').focus();
+    $('pw-quiz-input').select();
+  }
+}
+
+function dismissPwQuiz(mode) {
+  const now = Date.now();
+  if (mode === 'skip') {
+    localStorage.setItem(_pwQuizKey(), String(now));  // count as confirmed
+  } else if (mode === 'later') {
+    // Show again in ~1 day regardless of configured interval
+    const interval = (S.settings.pwQuizDays || 30) * 86400 * 1000;
+    localStorage.setItem(_pwQuizKey(), String(now - (interval - 86400 * 1000)));
+  }
+  $('pw-quiz-input').value = '';
+  $('pw-quiz-hint').textContent = '';
+  hideModal('modal-pw-quiz');
+}
+
+function _shouldShowBackupReminder() {
+  const days = S.settings.backupReminderDays;
+  if (!days) return false;
+  const lastExport = parseInt(localStorage.getItem(_exportTsKey()) || '0');
+  const lastShown = parseInt(localStorage.getItem(_backupReminderKey()) || '0');
+  const now = Date.now();
+  // Throttle to once per 24h
+  if (now - lastShown < 86400 * 1000) return false;
+  // If never exported, treat firstSeen as the baseline so we don't pester immediately
+  if (!lastExport) {
+    const firstSeen = parseInt(localStorage.getItem(_exportTsKey() + '.firstSeen') || '0');
+    if (!firstSeen) { localStorage.setItem(_exportTsKey() + '.firstSeen', String(now)); return false; }
+    return (now - firstSeen) > days * 86400 * 1000;
+  }
+  return (now - lastExport) > days * 86400 * 1000;
+}
+
+function _showBackupReminderToast() {
+  const lastExport = parseInt(localStorage.getItem(_exportTsKey()) || '0');
+  const baseline = lastExport || parseInt(localStorage.getItem(_exportTsKey() + '.firstSeen') || '0');
+  const days = baseline ? Math.floor((Date.now() - baseline) / 86400000) : '?';
+  const msg = lastExport
+    ? `Last backup was ${days} days ago. Settings → Data → Export encrypted archive.`
+    : `No backup yet (${days} days since first unlock). Settings → Data → Export encrypted archive.`;
+  toast(msg, { dur: 8000 });
+  localStorage.setItem(_backupReminderKey(), String(Date.now()));
+}
+
+function _checkRemindersAfterUnlock() {
+  setTimeout(() => {
+    if (!S.key) return;
+    // Quiz takes priority over backup reminder — don't stack both in one session
+    if (_shouldShowPwQuiz()) { _openPwQuizModal(); return; }
+    if (_shouldShowBackupReminder()) { _showBackupReminderToast(); }
+  }, 1500);
 }
 
 async function handleUnlock() {
