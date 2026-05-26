@@ -1366,6 +1366,11 @@ function lock() {
   $('unlock-diff-btn').textContent = S._isOpfs ? 'Different vault' : 'Different folder';
   $('unlock-hint').textContent = '';
   $('unlock-pass').value = '';
+  // Wipe any sensitive values still sitting in DOM inputs (mid-edit TOTP
+  // secret, recovery codes, register-password, etc.) — otherwise they remain
+  // readable via devtools after the screen swaps to the locked state.
+  try { clearEntryForm(); } catch {}
+  document.querySelectorAll('input[type="password"], textarea').forEach(el => { el.value = ''; });
   hideAllModals();
   showScreen('unlock');
 }
