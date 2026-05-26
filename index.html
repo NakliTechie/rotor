@@ -620,6 +620,13 @@ textarea { resize: vertical; min-height: 80px; }
       </div>
       <div style="display:flex;gap:10px">
         <div class="field" style="flex:1">
+          <label>Type</label>
+          <select id="code-kind" onchange="onCodeKindChange()">
+            <option value="totp">TOTP (time-based)</option>
+            <option value="hotp">HOTP (counter-based)</option>
+          </select>
+        </div>
+        <div class="field" style="flex:1">
           <label>Algorithm</label>
           <select id="code-algo"><option value="SHA-1">SHA-1</option><option value="SHA-256">SHA-256</option><option value="SHA-512">SHA-512</option></select>
         </div>
@@ -627,9 +634,15 @@ textarea { resize: vertical; min-height: 80px; }
           <label>Digits</label>
           <select id="code-digits"><option value="6">6</option><option value="7">7</option><option value="8">8</option></select>
         </div>
-        <div class="field" style="flex:1">
+      </div>
+      <div style="display:flex;gap:10px">
+        <div class="field" id="code-period-wrap" style="flex:1">
           <label>Period</label>
           <select id="code-period"><option value="30">30s</option><option value="60">60s</option></select>
+        </div>
+        <div class="field" id="code-counter-wrap" style="flex:1;display:none">
+          <label>Counter</label>
+          <input type="number" id="code-counter" min="0" step="1" value="0">
         </div>
       </div>
       <div class="field">
@@ -1042,13 +1055,12 @@ function base32Decode(s) {
   return new Uint8Array(out);
 }
 
-async function totpNow(secret, { digits = 6, period = 30, algorithm = 'SHA-1', offset = 0, at = null } = {}) {
+// Core HOTP step — counter-based HMAC truncation per RFC 4226.
+async function hotpAt(secret, counter, { digits = 6, algorithm = 'SHA-1' } = {}) {
   const keyBytes = base32Decode(secret);
   if (!keyBytes.length) throw new Error('Invalid TOTP secret.');
-  const now = at !== null ? at : Date.now() / 1000;
-  const T = Math.floor(now / period) + offset;
   const msg = new Uint8Array(8);
-  let t = T;
+  let t = counter;
   for (let i = 7; i >= 0; i--) { msg[i] = t & 0xff; t = Math.floor(t / 256); }
   const key = await crypto.subtle.importKey('raw', keyBytes,
     { name: 'HMAC', hash: algorithm }, false, ['sign']);
@@ -1058,22 +1070,32 @@ async function totpNow(secret, { digits = 6, period = 30, algorithm = 'SHA-1', o
   return String(code).padStart(digits, '0');
 }
 
+async function totpNow(secret, { digits = 6, period = 30, algorithm = 'SHA-1', offset = 0, at = null } = {}) {
+  const now = at !== null ? at : Date.now() / 1000;
+  const T = Math.floor(now / period) + offset;
+  return hotpAt(secret, T, { digits, algorithm });
+}
+
 function parseOtpauthUri(uri) {
-  // otpauth://totp/label?secret=...&issuer=...&algorithm=...&digits=...&period=...
+  // otpauth://{totp|hotp}/label?secret=...&issuer=...&algorithm=...&digits=...&period=...&counter=...
   try {
     const u = new URL(uri);
     if (u.protocol !== 'otpauth:') return null;
+    const kind = (u.host || '').toLowerCase();
+    if (kind !== 'totp' && kind !== 'hotp') return null;
     const label = decodeURIComponent(u.pathname.slice(1));
     const [issuerFromLabel, accountFromLabel] = label.includes(':')
       ? label.split(':').map(s => s.trim()) : [null, label.trim()];
     return {
+      kind,
       label: issuerFromLabel || accountFromLabel,
       account: accountFromLabel,
       issuer: u.searchParams.get('issuer') || issuerFromLabel || '',
       secret: (u.searchParams.get('secret') || '').toUpperCase(),
       algorithm: (u.searchParams.get('algorithm') || 'SHA-1').toUpperCase().replace('SHA', 'SHA-'),
       digits: parseInt(u.searchParams.get('digits') || '6', 10),
-      period: parseInt(u.searchParams.get('period') || '30', 10)
+      period: parseInt(u.searchParams.get('period') || '30', 10),
+      counter: parseInt(u.searchParams.get('counter') || '0', 10)
     };
   } catch { return null; }
 }
@@ -1626,6 +1648,9 @@ function openEntryModal(id) {
     $('code-algo').value = fv(entry, 'algorithm') || 'SHA-1';
     $('code-digits').value = fv(entry, 'digits') || '6';
     $('code-period').value = fv(entry, 'period') || '30';
+    $('code-counter').value = fv(entry, 'counter') || '0';
+    $('code-kind').value = (fv(entry, 'kind') || 'totp').toLowerCase() === 'hotp' ? 'hotp' : 'totp';
+    onCodeKindChange();
     $('code-recovery').value = fv(entry, 'recovery_codes') || '';
     $('code-notes').value = fv(entry, 'notes') || '';
   }
@@ -1639,6 +1664,15 @@ function clearEntryForm() {
   $('code-algo').value = 'SHA-1';
   $('code-digits').value = '6';
   $('code-period').value = '30';
+  $('code-counter').value = '0';
+  $('code-kind').value = 'totp';
+  onCodeKindChange();
+}
+
+function onCodeKindChange() {
+  const isHotp = $('code-kind').value === 'hotp';
+  $('code-period-wrap').style.display = isHotp ? 'none' : '';
+  $('code-counter-wrap').style.display = isHotp ? '' : 'none';
 }
 
 async function saveEntry() {
@@ -1652,6 +1686,7 @@ async function saveEntry() {
   if (!label) { toast('Label is required.', { error: true }); return; }
   const secret = $('code-secret').value.trim();
   if (!secret) { toast('TOTP secret is required.', { error: true }); return; }
+  const kind = $('code-kind').value === 'hotp' ? 'hotp' : 'totp';
   const fields = {
     label: { v: label, ts },
     secret: { v: secret, ts },
@@ -1660,6 +1695,8 @@ async function saveEntry() {
     algorithm: { v: $('code-algo').value, ts },
     digits: { v: $('code-digits').value, ts },
     period: { v: $('code-period').value, ts },
+    kind: { v: kind, ts },
+    counter: { v: kind === 'hotp' ? String(Math.max(0, parseInt($('code-counter').value) || 0)) : '0', ts },
     recovery_codes: { v: $('code-recovery').value.trim(), ts },
     notes: { v: $('code-notes').value.trim(), ts }
   };
@@ -2494,29 +2531,17 @@ async function renderCodesGrid() {
   const now = Date.now() / 1000;
   const pins = loadPins();
   const tiles = await Promise.all(codes.map(async e => {
+    const kind = (fv(e,'kind') || 'totp').toLowerCase();
     const period = parseInt(fv(e,'period') || '30', 10);
     const digits = parseInt(fv(e,'digits') || '6', 10);
     const algorithm = fv(e,'algorithm') || 'SHA-1';
     const secret = fv(e,'secret');
-    const elapsed = now % period;
-    const remaining = period - elapsed;
-    const progress = remaining / period;
-    const expiring = remaining <= 5;
+    const counter = parseInt(fv(e,'counter') || '0', 10);
     const pinned = pins.has(e.id);
-
-    let current = '––––––', nextCode = '';
-    try {
-      current = await totpNow(secret, { digits, period, algorithm });
-      if (expiring) nextCode = await totpNow(secret, { digits, period, algorithm, offset: 1 });
-    } catch {}
-
-    const offset = RING_C * (1 - progress);
-    const stroke = expiring ? 'var(--danger)' : 'var(--accent)';
     const label = escHtml(fv(e,'label') || '(no label)');
     const issuer = fv(e,'issuer') || fv(e,'account');
 
-    return `<div class="code-tile${pinned ? ' pinned' : ''}" id="tile-${e.id}">
-      <div class="code-tile-top">
+    const tileTop = `<div class="code-tile-top">
         <div class="code-tile-meta">
           <div class="code-label-text">${label}</div>
           ${issuer ? `<div class="code-issuer-text">${escHtml(issuer)}</div>` : ''}
@@ -2527,7 +2552,32 @@ async function renderCodesGrid() {
           <button class="code-pin-btn" title="${pinned ? 'Unpin' : 'Pin'}"
             onclick="event.stopPropagation();togglePin('${e.id}')">★</button>
         </div>
-      </div>
+      </div>`;
+
+    if (kind === 'hotp') {
+      return `<div class="code-tile${pinned ? ' pinned' : ''}" id="tile-${e.id}" data-kind="hotp">
+        ${tileTop}
+        <div class="code-main">
+          <div class="code-value" id="cv-${e.id}">— — — — — —</div>
+        </div>
+        <div class="code-next">counter: <strong id="ctr-${e.id}">${counter}</strong> · click to generate next</div>
+        <div style="display:none" id="code-raw-${e.id}" data-id="${e.id}" data-kind="hotp" data-counter="${counter}" data-digits="${digits}" data-algorithm="${algorithm}" data-secret="${escHtml(secret)}"></div>
+      </div>`;
+    }
+
+    const elapsed = now % period;
+    const remaining = period - elapsed;
+    const progress = remaining / period;
+    const expiring = remaining <= 5;
+    let current = '––––––', nextCode = '';
+    try {
+      current = await totpNow(secret, { digits, period, algorithm });
+      if (expiring) nextCode = await totpNow(secret, { digits, period, algorithm, offset: 1 });
+    } catch {}
+    const offset = RING_C * (1 - progress);
+    const stroke = expiring ? 'var(--danger)' : 'var(--accent)';
+    return `<div class="code-tile${pinned ? ' pinned' : ''}" id="tile-${e.id}" data-kind="totp">
+      ${tileTop}
       <div class="code-main">
         <div class="code-value${expiring ? ' expiring' : ''}" id="cv-${e.id}">${current}</div>
         <div class="code-ring-wrap">
@@ -2541,7 +2591,7 @@ async function renderCodesGrid() {
         </div>
       </div>
       ${expiring && nextCode ? `<div class="code-next">next: <strong>${nextCode}</strong></div>` : '<div class="code-next"></div>'}
-      <div style="display:none" id="code-raw-${e.id}" data-id="${e.id}" data-period="${period}" data-digits="${digits}" data-algorithm="${algorithm}" data-secret="${escHtml(secret)}"></div>
+      <div style="display:none" id="code-raw-${e.id}" data-id="${e.id}" data-kind="totp" data-period="${period}" data-digits="${digits}" data-algorithm="${algorithm}" data-secret="${escHtml(secret)}"></div>
     </div>`;
   }));
 
@@ -2549,7 +2599,11 @@ async function renderCodesGrid() {
   grid.querySelectorAll('.code-tile').forEach(tile => {
     const raw = tile.querySelector('[id^="code-raw-"]');
     if (!raw) return;
-    tile.addEventListener('click', () => copyTotpCode(raw.dataset.id, raw.dataset));
+    if (raw.dataset.kind === 'hotp') {
+      tile.addEventListener('click', () => generateAndAdvanceHotp(raw.dataset.id, raw.dataset));
+    } else {
+      tile.addEventListener('click', () => copyTotpCode(raw.dataset.id, raw.dataset));
+    }
   });
 }
 
@@ -2566,11 +2620,48 @@ async function copyTotpCode(id, opts) {
   if (tile) { tile.classList.add('copied'); setTimeout(() => tile.classList.remove('copied'), 1200); }
 }
 
+// Generate next HOTP code, copy to clipboard, advance counter on the entry.
+// The advance is persisted as an entry_updated event so other devices see it.
+let _hotpAdvancing = new Set();
+async function generateAndAdvanceHotp(id, opts) {
+  if (_hotpAdvancing.has(id)) return;
+  _hotpAdvancing.add(id);
+  try {
+    const counter = parseInt(opts.counter, 10) || 0;
+    const code = await hotpAt(opts.secret, counter, {
+      digits: parseInt(opts.digits, 10),
+      algorithm: opts.algorithm
+    }).catch(() => null);
+    if (!code) { toast('Could not generate code.', { error: true }); return; }
+    await copyField(code, 'hotp:' + id);
+    // Show the code briefly in the tile so the user sees it
+    const cv = $('cv-' + id);
+    if (cv) {
+      const orig = cv.textContent;
+      cv.textContent = code;
+      setTimeout(() => { if (cv.textContent === code) cv.textContent = orig; }, 5000);
+    }
+    // Persist the advanced counter
+    const ts = nowISO();
+    await appendEvent('entry_updated', {
+      id, type: 'code', fields: { counter: { v: String(counter + 1), ts } }
+    });
+    const ctrEl = $('ctr-' + id);
+    if (ctrEl) ctrEl.textContent = String(counter + 1);
+    // Update the data-counter on the hidden raw element so the next click uses the new counter
+    const raw = document.querySelector(`#tile-${id} [id^="code-raw-"]`);
+    if (raw) raw.dataset.counter = String(counter + 1);
+    const tile = $('tile-' + id);
+    if (tile) { tile.classList.add('copied'); setTimeout(() => tile.classList.remove('copied'), 1200); }
+  } finally { _hotpAdvancing.delete(id); }
+}
+
 async function tickCodesGrid() {
   if (!S.key) return;
   const now = Date.now() / 1000;
   const codes = getCodeEntries();
   for (const e of codes) {
+    if ((fv(e,'kind') || 'totp').toLowerCase() === 'hotp') continue;  // no auto-rotation
     const period = parseInt(fv(e,'period') || '30', 10);
     const digits = parseInt(fv(e,'digits') || '6', 10);
     const algorithm = fv(e,'algorithm') || 'SHA-1';
@@ -2631,6 +2722,10 @@ function parseOtpUri(uri) {
   if (dig && [6,7,8].includes(p.digits)) dig.value = String(p.digits);
   const per = $('code-period');
   if (per && [30,60].includes(p.period)) per.value = String(p.period);
+  const knd = $('code-kind');
+  if (knd && (p.kind === 'hotp' || p.kind === 'totp')) { knd.value = p.kind; onCodeKindChange(); }
+  const ctr = $('code-counter');
+  if (ctr && p.kind === 'hotp') ctr.value = String(p.counter || 0);
 }
 
 // otpauth paste area in import modal
@@ -2644,7 +2739,8 @@ function previewOtpauthPaste(text) {
     fields: {
       label: p.label, secret: p.secret, account: p.account,
       issuer: p.issuer, algorithm: p.algorithm,
-      digits: String(p.digits), period: String(p.period)
+      digits: String(p.digits), period: String(p.period),
+      kind: p.kind, counter: String(p.counter || 0)
     }
   })) : null;
 }
