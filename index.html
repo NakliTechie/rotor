@@ -747,6 +747,15 @@ textarea { resize: vertical; min-height: 80px; }
         </p>
         <button class="btn secondary" style="width:100%" onclick="hideModal('modal-settings');openUpgradeVaultModal()">Upgrade vault format to v2…</button>
       </div>
+
+      <!-- Change master password (shown only for v2 vaults) -->
+      <div id="change-master-pw-section" style="display:none;margin-top:18px;padding-top:14px;border-top:1px solid var(--border)">
+        <div class="security-section-title" style="font-weight:600;margin-bottom:6px">Master password</div>
+        <p style="font-size:13px;color:var(--muted);margin:0 0 10px">
+          Cheap on v2 vaults: only the wrap-blob in meta changes — no events are re-encrypted.
+        </p>
+        <button class="btn secondary" style="width:100%" onclick="hideModal('modal-settings');openChangeMasterPwModal()">Change master password…</button>
+      </div>
     </div>
 
     <!-- Data tab -->
@@ -763,6 +772,47 @@ textarea { resize: vertical; min-height: 80px; }
     <div style="text-align:right">
       <button class="btn ghost btn-sm" onclick="hideModal('modal-settings')">Close</button>
     </div>
+  </div>
+</div>
+
+<!-- ══════════════ MODAL: CHANGE MASTER PASSWORD (v2 only) ══════════════ -->
+<div id="modal-change-master-pw" class="modal-bg">
+  <div class="modal">
+    <h3>Change master password</h3>
+    <p style="font-size:13px;color:var(--muted);margin:0 0 14px">
+      Only the wrap of your vault's master secret changes. No events are re-encrypted.
+      Other devices will need the new password the next time they unlock.
+    </p>
+    <form onsubmit="handleChangeMasterPw();return false;">
+      <div class="field">
+        <label for="cmp-current">Current master password</label>
+        <div class="pw-wrap">
+          <input type="password" id="cmp-current" autocomplete="current-password">
+          <button class="pw-toggle" type="button" onclick="togglePw('cmp-current', this)">👁</button>
+        </div>
+      </div>
+      <div class="field">
+        <label for="cmp-new">New master password</label>
+        <div class="pw-wrap">
+          <input type="password" id="cmp-new" autocomplete="new-password" oninput="updateEntropyMeter(this.value, 'cmp-entropy-bar', 'cmp-entropy-label')">
+          <button class="pw-toggle" type="button" onclick="togglePw('cmp-new', this)">👁</button>
+        </div>
+        <div class="entropy-bar-wrap"><div class="entropy-bar" id="cmp-entropy-bar"></div></div>
+        <div class="entropy-label" id="cmp-entropy-label"></div>
+      </div>
+      <div class="field">
+        <label for="cmp-new2">Confirm new password</label>
+        <div class="pw-wrap">
+          <input type="password" id="cmp-new2" autocomplete="new-password">
+          <button class="pw-toggle" type="button" onclick="togglePw('cmp-new2', this)">👁</button>
+        </div>
+      </div>
+      <div class="hint" id="cmp-hint" style="font-size:12px;color:var(--muted);min-height:16px;margin-bottom:10px"></div>
+      <div class="actions-bar" style="display:flex;gap:8px;justify-content:flex-end">
+        <button type="button" class="btn ghost btn-sm" onclick="hideModal('modal-change-master-pw')">Cancel</button>
+        <button type="submit" class="btn btn-sm" id="cmp-confirm-btn">Change password</button>
+      </div>
+    </form>
   </div>
 </div>
 
@@ -1412,6 +1462,46 @@ async function migrateV1toV2(password) {
   S.salt = null;
 }
 
+// Change the master password on a v2 vault. Cheap operation in v2: only the
+// pw_wrap blob in meta changes — master_secret stays put, vault_key stays put,
+// every event in every device's log stays put.
+async function changeMasterPassword(currentPw, newPw) {
+  if (S.vault_format_version !== 2) throw new Error('Change master password requires a v2 vault.');
+  if (!argon2.isReady()) {
+    await argon2.init();
+    if (!argon2.isReady()) throw new Error('Argon2id WASM is not loaded.');
+  }
+  if (!S.master_secret) throw new Error('Vault is locked.');
+
+  // Verify the current password by re-deriving pw_key and unwrapping master_secret.
+  const kdf_salt = b64d(S.meta.kdf.salt_kdf);
+  const cur_pw_key = await derivePwKeyArgon2(currentPw, kdf_salt);
+  const cur_pwWrapKey = await makePwOnlyWrapKey(cur_pw_key);
+  let ms_check;
+  try {
+    ms_check = await aesGcmUnwrap(cur_pwWrapKey, S.meta.pw_wrap.wrapped_master, S.meta.pw_wrap.wrap_nonce);
+  } catch { throw new Error('Current master password is incorrect.'); }
+  // Defensive: the unwrapped master_secret must match the one we hold in memory.
+  let matches = ms_check.length === S.master_secret.length;
+  if (matches) for (let i = 0; i < ms_check.length; i++) if (ms_check[i] !== S.master_secret[i]) { matches = false; break; }
+  if (!matches) throw new Error('Current master password is incorrect.');
+
+  // Derive new pw_key with the same kdf_salt and re-wrap master_secret.
+  const new_pw_key = await derivePwKeyArgon2(newPw, kdf_salt);
+  const new_pwWrapKey = await makePwOnlyWrapKey(new_pw_key);
+  const wrap = await aesGcmWrap(new_pwWrapKey, S.master_secret);
+  S.meta.pw_wrap = { enabled: true, wrapped_master: wrap.ct_b64, wrap_nonce: wrap.nonce_b64 };
+  await writeMeta(S.dirHandle, S.meta);
+
+  // Swap in the new pw_key (zero the old one first).
+  if (S.pw_key) S.pw_key.fill(0);
+  S.pw_key = new_pw_key;
+  cur_pw_key.fill(0);
+
+  // Informational event — no password material in the payload.
+  await appendEvent('password_changed', { ts: nowISO() });
+}
+
 // Joining a v2 vault from a still-v1 device: before this device writes any
 // new event, upgrade its own log stream so newly-written events use vault_key
 // and old ones get re-encrypted to match. Returns true if upgrade happened.
@@ -2029,9 +2119,9 @@ function estimateEntropy(pw) {
   return cs ? Math.floor(pw.length * Math.log2(cs)) : 0;
 }
 
-function updateEntropyMeter(pw) {
+function updateEntropyMeter(pw, barId = 'entropy-bar', labelId = 'entropy-label') {
   const bits = estimateEntropy(pw);
-  const bar = $('entropy-bar'); const lbl = $('entropy-label');
+  const bar = $(barId); const lbl = $(labelId);
   if (!bar || !lbl) return;
   let pct, color, text;
   if (!pw)      { pct = 0;  color = 'var(--border)'; text = ''; }
@@ -2259,6 +2349,8 @@ function openSettings() {
   $('set-backup-reminder').value = S.settings.backupReminderDays ?? 60;
   const upgSection = $('upgrade-vault-section');
   if (upgSection) upgSection.style.display = S.vault_format_version === 2 ? 'none' : '';
+  const cmpSection = $('change-master-pw-section');
+  if (cmpSection) cmpSection.style.display = S.vault_format_version === 2 ? '' : 'none';
   showSettingsTab('vault');
   renderDeviceRoster();
   showModal('modal-settings');
@@ -2908,6 +3000,52 @@ function _showBackupReminderToast() {
     : `No backup yet (${days} days since first unlock). Settings → Data → Export encrypted archive.`;
   toast(msg, { dur: 8000 });
   localStorage.setItem(_backupReminderKey(), String(Date.now()));
+}
+
+// ── Change master password (v2 only) handler ──
+
+function openChangeMasterPwModal() {
+  if (S.vault_format_version !== 2) { toast('This vault must be upgraded to v2 first.'); return; }
+  $('cmp-current').value = '';
+  $('cmp-new').value = '';
+  $('cmp-new2').value = '';
+  $('cmp-hint').textContent = '';
+  $('cmp-hint').style.color = 'var(--muted)';
+  $('cmp-confirm-btn').disabled = false;
+  $('cmp-confirm-btn').textContent = 'Change password';
+  updateEntropyMeter('', 'cmp-entropy-bar', 'cmp-entropy-label');
+  showModal('modal-change-master-pw');
+  setTimeout(() => $('cmp-current')?.focus(), 60);
+}
+
+async function handleChangeMasterPw() {
+  const cur = $('cmp-current').value;
+  const n1 = $('cmp-new').value;
+  const n2 = $('cmp-new2').value;
+  const hint = $('cmp-hint');
+  const btn = $('cmp-confirm-btn');
+  if (!cur)              { hint.textContent = 'Enter current password.'; hint.style.color = 'var(--danger)'; return; }
+  if (!n1)               { hint.textContent = 'Enter a new password.';  hint.style.color = 'var(--danger)'; return; }
+  if (n1 !== n2)         { hint.textContent = 'New passwords do not match.'; hint.style.color = 'var(--danger)'; return; }
+  if (estimateEntropy(n1) < 20) {
+    hint.textContent = 'New password is too weak (< 20 bits entropy).';
+    hint.style.color = 'var(--danger)'; return;
+  }
+  btn.disabled = true; btn.textContent = 'Changing…';
+  hint.textContent = 'Re-deriving Argon2id keys (a few seconds)…';
+  hint.style.color = 'var(--muted)';
+  try {
+    await changeMasterPassword(cur, n1);
+    $('cmp-current').value = ''; $('cmp-new').value = ''; $('cmp-new2').value = '';
+    hint.textContent = '';
+    hideModal('modal-change-master-pw');
+    toast('Master password changed.');
+  } catch (e) {
+    hint.textContent = e.message;
+    hint.style.color = 'var(--danger)';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Change password';
+  }
 }
 
 // ── Vault format upgrade (v1 → v2) handler ──
