@@ -325,11 +325,13 @@ textarea { resize: vertical; min-height: 80px; }
 .code-tile-meta { flex: 1; min-width: 0; }
 .code-label-text { font-weight: 600; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .code-issuer-text { font-size: 11px; color: var(--muted); margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.code-pin-btn {
+.code-pin-btn, .code-edit-btn {
   background: none; border: none; font-size: 13px;
-  color: var(--muted); padding: 0 0 0 6px; line-height: 1; flex-shrink: 0;
+  color: var(--muted); padding: 0 0 0 6px; line-height: 1; flex-shrink: 0; cursor: pointer;
 }
 .code-pin-btn:hover, .code-tile.pinned .code-pin-btn { color: var(--warn); }
+.code-edit-btn:hover { color: var(--accent); }
+.code-tile-actions { display: flex; align-items: flex-start; gap: 0; }
 .code-main { display: flex; align-items: center; gap: 10px; }
 .code-value {
   font-family: var(--mono); font-size: 22px; font-weight: 700;
@@ -601,6 +603,10 @@ textarea { resize: vertical; min-height: 80px; }
           <label>Period</label>
           <select id="code-period"><option value="30">30s</option><option value="60">60s</option></select>
         </div>
+      </div>
+      <div class="field">
+        <label>Recovery codes <span style="color:var(--muted);font-weight:400">(optional — paste the backup codes the service gave you)</span></label>
+        <textarea id="code-recovery" rows="4" placeholder="one per line" autocomplete="off"></textarea>
       </div>
     </div>
 
@@ -1530,6 +1536,7 @@ function openEntryModal(id) {
     $('code-algo').value = fv(entry, 'algorithm') || 'SHA-1';
     $('code-digits').value = fv(entry, 'digits') || '6';
     $('code-period').value = fv(entry, 'period') || '30';
+    $('code-recovery').value = fv(entry, 'recovery_codes') || '';
   }
 
   showModal('modal-entry');
@@ -1537,7 +1544,7 @@ function openEntryModal(id) {
 
 function clearEntryForm() {
   stopEntryQrScan?.();
-  ['code-uri','code-label','code-secret','code-account','code-issuer'].forEach(id => { const el = $(id); if (el) el.value = ''; });
+  ['code-uri','code-label','code-secret','code-account','code-issuer','code-recovery'].forEach(id => { const el = $(id); if (el) el.value = ''; });
   $('code-algo').value = 'SHA-1';
   $('code-digits').value = '6';
   $('code-period').value = '30';
@@ -1561,7 +1568,8 @@ async function saveEntry() {
     issuer: { v: $('code-issuer').value.trim(), ts },
     algorithm: { v: $('code-algo').value, ts },
     digits: { v: $('code-digits').value, ts },
-    period: { v: $('code-period').value, ts }
+    period: { v: $('code-period').value, ts },
+    recovery_codes: { v: $('code-recovery').value.trim(), ts }
   };
 
   if (isNew) {
@@ -2208,8 +2216,12 @@ async function renderCodesGrid() {
           <div class="code-label-text">${label}</div>
           ${issuer ? `<div class="code-issuer-text">${escHtml(issuer)}</div>` : ''}
         </div>
-        <button class="code-pin-btn" title="${pinned ? 'Unpin' : 'Pin'}"
-          onclick="event.stopPropagation();togglePin('${e.id}')">★</button>
+        <div class="code-tile-actions">
+          <button class="code-edit-btn" title="View / edit"
+            onclick="event.stopPropagation();openEntryModal('${e.id}')">✎</button>
+          <button class="code-pin-btn" title="${pinned ? 'Unpin' : 'Pin'}"
+            onclick="event.stopPropagation();togglePin('${e.id}')">★</button>
+        </div>
       </div>
       <div class="code-main">
         <div class="code-value${expiring ? ' expiring' : ''}" id="cv-${e.id}">${current}</div>
